@@ -1,0 +1,27 @@
+body {
+    background-color: #f7f9fb;
+}
+
+.main-content {
+    padding: 2rem 0;
+}
+
+.table thead {
+    background-color: #198754;
+    color: #fff;
+}
+
+.card-stat {
+    border-left: 4px solid #198754;
+}
+
+.form-section {
+    background: #fff;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+}
+
+.badge-status {
+    font-size: 0.85rem;
+}
