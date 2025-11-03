@@ -1,29 +1,29 @@
 <?php include __DIR__ . '/../layouts/header.php'; ?>
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-5">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h3 class="card-title mb-4 text-center">Masuk ke Sistem</h3>
+<section class="section auth-section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-5">
+                <div class="auth-card shadow-lg">
+                    <h3 class="auth-title text-center">Masuk ke SI Posyandu</h3>
+                    <p class="auth-subtitle text-center">Gunakan akun Puskesmas, bidan, atau kader untuk melanjutkan.</p>
                     <?php if ($error = flash('error')): ?>
-                        <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+                        <div class="alert alert-danger alert-modern"><?= htmlspecialchars($error) ?></div>
                     <?php endif; ?>
-                    <form method="post" action="?page=login">
-                        <div class="mb-3">
-                            <label class="form-label">Email</label>
-                            <input type="email" name="email" class="form-control" required>
+                    <form method="post" action="<?= url('?page=login') ?>" class="auth-form">
+                        <div class="form-floating mb-3">
+                            <input type="email" name="email" id="email" class="form-control" placeholder="nama@puskesmas.go.id" required>
+                            <label for="email">Email</label>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Password</label>
-                            <input type="password" name="password" class="form-control" required>
+                        <div class="form-floating mb-4">
+                            <input type="password" name="password" id="password" class="form-control" placeholder="Password" required>
+                            <label for="password">Password</label>
                         </div>
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-success">Masuk</button>
-                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Masuk</button>
                     </form>
+                    <p class="auth-help text-center">Butuh bantuan? Hubungi admin super untuk reset akun.</p>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
 <?php include __DIR__ . '/../layouts/footer.php'; ?>

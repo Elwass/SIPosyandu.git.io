@@ -37,6 +37,6 @@ class AuthController
     public function logout(): void
     {
         session_destroy();
-        redirect('?page=login');
+        redirect('?page=landing');
     }
 }

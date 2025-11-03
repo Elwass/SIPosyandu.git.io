@@ -20,7 +20,8 @@ Aplikasi informasi Posyandu berbasis PHP (tanpa framework) yang dapat dijalankan
 1. Salin seluruh folder proyek ini ke direktori `htdocs` (misal `C:/xampp/htdocs/si_posyandu`).
 2. Import basis data menggunakan berkas `sql/schema.sql` melalui phpMyAdmin atau terminal.
 3. Sesuaikan kredensial database di `app/config.php` jika diperlukan.
-4. Akses aplikasi melalui `http://localhost/si_posyandu/public`.
+4. (Opsional) Setel variabel lingkungan `APP_BASE_URL` bila aplikasi tidak berjalan langsung dari direktori `public` (contoh: `http://localhost/si_posyandu/public`).
+5. Akses aplikasi melalui URL sesuai penempatan Anda.
 
 ### Akun Awal
 
@@ -41,3 +42,4 @@ Aplikasi informasi Posyandu berbasis PHP (tanpa framework) yang dapat dijalankan
 
 - Untuk pengiriman reminder (SMS/WhatsApp/Email) masih berupa pencatatan jadwal; integrasi gateway dapat ditambahkan kemudian.
 - Komponen PDF menggunakan generator sederhana internal. Untuk tampilan lebih kaya, dapat diganti dengan pustaka seperti Dompdf/FPDF jika diinginkan.
+- Variabel lingkungan `APP_TIMEZONE` dapat digunakan bila zona waktu server berbeda dengan kebutuhan operasional.

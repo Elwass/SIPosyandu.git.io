@@ -1,12 +1,15 @@
 <?php
 require __DIR__ . '/../app/bootstrap.php';
 
-$page = $_GET['page'] ?? (is_logged_in() ? 'dashboard' : 'login');
+$page = $_GET['page'] ?? (is_logged_in() ? 'dashboard' : 'landing');
 $method = $_SERVER['REQUEST_METHOD'];
 
 $authController = new AuthController();
 
 switch ($page) {
+    case 'landing':
+        include __DIR__ . '/../app/Views/landing.php';
+        break;
     case 'login':
         if ($method === 'POST') {
             $authController->login();

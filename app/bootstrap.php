@@ -1,12 +1,11 @@
 <?php
 session_start();
 
-$config = require __DIR__ . '/config.php';
+require_once __DIR__ . '/Helpers.php';
 
-date_default_timezone_set($config['app']['timezone']);
+date_default_timezone_set(config('app.timezone', 'UTC'));
 
 require_once __DIR__ . '/Database.php';
-require_once __DIR__ . '/Helpers.php';
 
 spl_autoload_register(function ($class) {
     $paths = [

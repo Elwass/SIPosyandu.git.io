@@ -9,8 +9,10 @@ return [
         'charset' => 'utf8mb4',
     ],
     'app' => [
-        'base_url' => '/si_posyandu/public',
+        // Biarkan kosong untuk auto-detect berdasarkan lokasi index.php,
+        // atau isi dengan URL absolut/path khusus (mis. http://localhost/si_posyandu/public)
+        'base_url' => getenv('APP_BASE_URL') ?: '',
         'name' => 'SI Posyandu',
-        'timezone' => 'Asia/Jakarta'
+        'timezone' => getenv('APP_TIMEZONE') ?: 'Asia/Jakarta'
     ]
 ];
