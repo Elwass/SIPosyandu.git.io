@@ -1,7 +1,7 @@
 <?php
 require __DIR__ . '/../app/bootstrap.php';
 
-$page = $_GET['page'] ?? (is_logged_in() ? 'dashboard' : 'landing');
+$page = $_GET['page'] ?? (is_logged_in() ? (user()['role'] === 'pasien' ? 'patient-dashboard' : 'dashboard') : 'landing');
 $method = $_SERVER['REQUEST_METHOD'];
 
 $authController = new AuthController();
@@ -25,6 +25,18 @@ switch ($page) {
             redirect('?page=login');
         }
         (new DashboardController())->index();
+        break;
+    case 'patient-dashboard':
+        (new PatientController())->dashboard();
+        break;
+    case 'patient-profile':
+        (new PatientController())->profile();
+        break;
+    case 'patient-bpjs-update':
+        (new PatientController())->updateBpjs();
+        break;
+    case 'patient-child-store':
+        (new PatientController())->storeChild();
         break;
     case 'residents':
         if (!is_logged_in()) {
