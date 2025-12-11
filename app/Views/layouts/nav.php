@@ -46,7 +46,10 @@ $baseLandingUrl = url('?page=landing');
                         <li class="nav-item"><a class="nav-link" href="<?= $baseLandingUrl ?>#services">Layanan</a></li>
                         <li class="nav-item"><a class="nav-link" href="<?= $baseLandingUrl ?>#contact">Kontak</a></li>
                         <li class="nav-item mt-3 mt-lg-0 ms-lg-3">
-                            <a class="btn btn-primary" href="<?= url('?page=login') ?>">Masuk Sistem</a>
+                            <a class="btn btn-outline-primary" href="<?= url('?page=login') ?>">Masuk Petugas</a>
+                        </li>
+                        <li class="nav-item mt-2 mt-lg-0 ms-lg-2">
+                            <a class="btn btn-primary" href="<?= url('?page=patient-register') ?>">Daftar Pasien</a>
                         </li>
                     </ul>
                 <?php endif; ?>

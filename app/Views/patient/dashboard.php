@@ -31,6 +31,21 @@
         </div>
 
         <div class="surface-card mb-4">
+            <div class="surface-body d-flex flex-column flex-lg-row align-items-lg-center justify-content-lg-between">
+                <div>
+                    <h5 class="mb-1">Lengkapi data Anda</h5>
+                    <p class="mb-0 text-muted">
+                        Tambah balita yang Anda asuh dan pastikan status BPJS sudah diisi untuk memudahkan pelayanan.
+                    </p>
+                </div>
+                <div class="d-flex gap-2 mt-3 mt-lg-0">
+                    <a href="<?= url('?page=patient-profile') ?>#bpjs" class="btn btn-outline-primary">Perbarui BPJS</a>
+                    <a href="<?= url('?page=patient-profile') ?>#children" class="btn btn-primary">Tambah Balita</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="surface-card mb-4">
             <div class="surface-header">
                 <h3>Daftar Balita</h3>
             </div>

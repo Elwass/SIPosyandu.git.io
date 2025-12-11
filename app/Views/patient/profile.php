@@ -26,7 +26,7 @@
                 </div>
             </div>
             <div class="col-lg-6">
-                <div class="surface-card h-100">
+                <div class="surface-card h-100" id="bpjs">
                     <div class="surface-header d-flex justify-content-between align-items-center">
                         <h3 class="mb-0">Data BPJS</h3>
                     </div>
@@ -68,7 +68,7 @@
             </div>
         </div>
 
-        <div class="surface-card mt-4">
+        <div class="surface-card mt-4" id="children">
             <div class="surface-header d-flex justify-content-between align-items-center">
                 <h3 class="mb-0">Balita Anda</h3>
                 <span class="badge rounded-pill bg-soft-primary text-primary"><?= count($children) ?> terdaftar</span>

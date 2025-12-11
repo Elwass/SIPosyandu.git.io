@@ -17,6 +17,13 @@ switch ($page) {
             $authController->showLogin();
         }
         break;
+    case 'patient-register':
+        if ($method === 'POST') {
+            $authController->registerPatient();
+        } else {
+            $authController->showPatientRegister();
+        }
+        break;
     case 'logout':
         $authController->logout();
         break;
