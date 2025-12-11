@@ -31,7 +31,8 @@ class AuthController
             'role' => $user['role'],
         ];
 
-        redirect('?page=dashboard');
+        $target = $user['role'] === 'pasien' ? '?page=patient-dashboard' : '?page=dashboard';
+        redirect($target);
     }
 
     public function logout(): void
