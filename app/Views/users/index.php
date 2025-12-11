@@ -35,6 +35,7 @@
                                     <option value="admin">Admin Puskesmas</option>
                                     <option value="midwife">Bidan</option>
                                     <option value="kader">Kader Posyandu</option>
+                                    <option value="pasien">Pasien</option>
                                     <option value="super_admin">Super Admin</option>
                                 </select>
                             </div>
