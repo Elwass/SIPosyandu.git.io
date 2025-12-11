@@ -1,6 +1,15 @@
 CREATE DATABASE IF NOT EXISTS si_posyandu CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE si_posyandu;
 
+-- ensure a clean slate when re-running the schema script
+DROP TABLE IF EXISTS reminders;
+DROP TABLE IF EXISTS immunizations;
+DROP TABLE IF EXISTS measurements;
+DROP TABLE IF EXISTS patient_children;
+DROP TABLE IF EXISTS bpjs_profiles;
+DROP TABLE IF EXISTS residents;
+DROP TABLE IF EXISTS users;
+
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -8,7 +17,7 @@ CREATE TABLE users (
     password VARCHAR(255) NOT NULL,
     role ENUM('super_admin', 'admin', 'midwife', 'kader', 'pasien') NOT NULL DEFAULT 'kader',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE bpjs_profiles (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -49,7 +58,35 @@ CREATE TABLE residents (
     gender ENUM('male', 'female') NOT NULL,
     category ENUM('pregnant', 'toddler', 'elderly') NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE bpjs_profiles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    no_bpjs VARCHAR(25) NULL,
+    status_bpjs ENUM('aktif', 'tidak_aktif', 'tidak_diketahui') NOT NULL DEFAULT 'tidak_diketahui',
+    jenis_bpjs VARCHAR(50) NULL,
+    faskes_tingkat_1 VARCHAR(120) NULL,
+    tanggal_validasi DATE NULL,
+    keterangan TEXT NULL,
+    bpjs_reference_id VARCHAR(100) NULL,
+    last_bpjs_check_at DATETIME NULL,
+    source_system ENUM('manual', 'api') NOT NULL DEFAULT 'manual',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_user_bpjs (user_id),
+    CONSTRAINT fk_bpjs_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE patient_children (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    resident_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_patient_child (user_id, resident_id),
+    CONSTRAINT fk_patient_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_patient_resident FOREIGN KEY (resident_id) REFERENCES residents(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE bpjs_profiles (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -90,7 +127,7 @@ CREATE TABLE measurements (
     measured_at DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (resident_id) REFERENCES residents(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE immunizations (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -102,7 +139,7 @@ CREATE TABLE immunizations (
     notes VARCHAR(255) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (resident_id) REFERENCES residents(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE reminders (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -115,7 +152,7 @@ CREATE TABLE reminders (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (resident_id) REFERENCES residents(id) ON DELETE CASCADE,
     FOREIGN KEY (immunization_id) REFERENCES immunizations(id) ON DELETE SET NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO users (name, email, password, role) VALUES
 ('Super Admin', 'super@posyandu.test', '$2y$10$zO80yAGP82LPgAvFp8Z64eiUm7Uxr87hcPLZ9eczsQnUnxE27XGr2', 'super_admin'),
