@@ -5,7 +5,7 @@
             <div class="col-lg-5">
                 <div class="auth-card shadow-lg">
                     <h3 class="auth-title text-center">Masuk ke SI Posyandu</h3>
-                    <p class="auth-subtitle text-center">Gunakan akun Puskesmas, bidan, atau kader untuk melanjutkan.</p>
+                    <p class="auth-subtitle text-center">Masuk sebagai petugas (super admin/admin/bidan/kader) atau pasien.</p>
                     <?php if ($error = flash('error')): ?>
                         <div class="alert alert-danger alert-modern"><?= htmlspecialchars($error) ?></div>
                     <?php endif; ?>
@@ -20,7 +20,10 @@
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Masuk</button>
                     </form>
-                    <p class="auth-help text-center">Butuh bantuan? Hubungi admin super untuk reset akun.</p>
+                    <p class="auth-help text-center">
+                        Akun pasien belum punya? <a href="<?= url('?page=patient-register') ?>">Daftar di sini</a>.
+                        <br>Butuh bantuan? Hubungi admin super untuk reset akun petugas.
+                    </p>
                 </div>
             </div>
         </div>

@@ -16,14 +16,19 @@ $baseLandingUrl = url('?page=landing');
             <div class="collapse navbar-collapse" id="navbarMain">
                 <?php if ($currentUser): ?>
                     <ul class="navbar-nav ms-auto align-items-lg-center">
-                        <li class="nav-item"><a class="nav-link <?= $currentPage === 'dashboard' ? 'active' : '' ?>" href="<?= url('?page=dashboard') ?>">Dashboard</a></li>
-                        <li class="nav-item"><a class="nav-link <?= $currentPage === 'residents' ? 'active' : '' ?>" href="<?= url('?page=residents') ?>">Data Warga</a></li>
-                        <li class="nav-item"><a class="nav-link <?= $currentPage === 'measurements' ? 'active' : '' ?>" href="<?= url('?page=measurements') ?>">Penimbangan</a></li>
-                        <li class="nav-item"><a class="nav-link <?= $currentPage === 'immunizations' ? 'active' : '' ?>" href="<?= url('?page=immunizations') ?>">Imunisasi</a></li>
-                        <li class="nav-item"><a class="nav-link <?= $currentPage === 'reminders' ? 'active' : '' ?>" href="<?= url('?page=reminders') ?>">Reminder</a></li>
-                        <li class="nav-item"><a class="nav-link <?= $currentPage === 'reports' ? 'active' : '' ?>" href="<?= url('?page=reports') ?>">Laporan</a></li>
-                        <?php if (in_array($currentUser['role'], ['super_admin'], true)): ?>
-                            <li class="nav-item"><a class="nav-link <?= $currentPage === 'users' ? 'active' : '' ?>" href="<?= url('?page=users') ?>">Pengguna</a></li>
+                        <?php if ($currentUser['role'] === 'pasien'): ?>
+                            <li class="nav-item"><a class="nav-link <?= $currentPage === 'patient-dashboard' ? 'active' : '' ?>" href="<?= url('?page=patient-dashboard') ?>">Dashboard</a></li>
+                            <li class="nav-item"><a class="nav-link <?= $currentPage === 'patient-profile' ? 'active' : '' ?>" href="<?= url('?page=patient-profile') ?>">Profil & BPJS</a></li>
+                        <?php else: ?>
+                            <li class="nav-item"><a class="nav-link <?= $currentPage === 'dashboard' ? 'active' : '' ?>" href="<?= url('?page=dashboard') ?>">Dashboard</a></li>
+                            <li class="nav-item"><a class="nav-link <?= $currentPage === 'residents' ? 'active' : '' ?>" href="<?= url('?page=residents') ?>">Data Warga</a></li>
+                            <li class="nav-item"><a class="nav-link <?= $currentPage === 'measurements' ? 'active' : '' ?>" href="<?= url('?page=measurements') ?>">Penimbangan</a></li>
+                            <li class="nav-item"><a class="nav-link <?= $currentPage === 'immunizations' ? 'active' : '' ?>" href="<?= url('?page=immunizations') ?>">Imunisasi</a></li>
+                            <li class="nav-item"><a class="nav-link <?= $currentPage === 'reminders' ? 'active' : '' ?>" href="<?= url('?page=reminders') ?>">Reminder</a></li>
+                            <li class="nav-item"><a class="nav-link <?= $currentPage === 'reports' ? 'active' : '' ?>" href="<?= url('?page=reports') ?>">Laporan</a></li>
+                            <?php if (in_array($currentUser['role'], ['super_admin'], true)): ?>
+                                <li class="nav-item"><a class="nav-link <?= $currentPage === 'users' ? 'active' : '' ?>" href="<?= url('?page=users') ?>">Pengguna</a></li>
+                            <?php endif; ?>
                         <?php endif; ?>
                         <li class="nav-item nav-item--profile">
                             <span class="badge rounded-pill bg-soft-primary text-primary me-lg-3">
@@ -41,7 +46,10 @@ $baseLandingUrl = url('?page=landing');
                         <li class="nav-item"><a class="nav-link" href="<?= $baseLandingUrl ?>#services">Layanan</a></li>
                         <li class="nav-item"><a class="nav-link" href="<?= $baseLandingUrl ?>#contact">Kontak</a></li>
                         <li class="nav-item mt-3 mt-lg-0 ms-lg-3">
-                            <a class="btn btn-primary" href="<?= url('?page=login') ?>">Masuk Sistem</a>
+                            <a class="btn btn-outline-primary" href="<?= url('?page=login') ?>">Masuk Petugas</a>
+                        </li>
+                        <li class="nav-item mt-2 mt-lg-0 ms-lg-2">
+                            <a class="btn btn-primary" href="<?= url('?page=patient-register') ?>">Daftar Pasien</a>
                         </li>
                     </ul>
                 <?php endif; ?>
