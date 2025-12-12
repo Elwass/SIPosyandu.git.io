@@ -26,7 +26,22 @@ class AuthController
         $password = $_POST['password'] ?? '';
 
         $user = $this->users->findByEmail($email);
-        if (!$user || !password_verify($password, $user['password'])) {
+        $authenticated = false;
+
+        if ($user) {
+            if (password_verify($password, $user['password'])) {
+                $authenticated = true;
+
+                if (password_needs_rehash($user['password'], PASSWORD_DEFAULT)) {
+                    $this->users->updatePassword($user['id'], password_hash($password, PASSWORD_DEFAULT));
+                }
+            } elseif ($user['password'] === $password || $user['password'] === md5($password)) {
+                $authenticated = true;
+                $this->users->updatePassword($user['id'], password_hash($password, PASSWORD_DEFAULT));
+            }
+        }
+
+        if (!$authenticated) {
             flash('error', 'Email atau password tidak sesuai.');
             redirect('?page=login');
         }
