@@ -351,5 +351,374 @@ Sistem informasi Posyandu berbasis web ditujukan untuk membantu Puskesmas mengat
 6. Uji coba di satu Posyandu pilot dan pelatihan pengguna.
 7. Evaluasi dan rollout bertahap.
 
+## Role Baru "Pasien" & Integrasi Data BPJS
+
+### 1. Desain Role & Hak Akses "Pasien"
+
+**Konsep akses**
+- **Boleh**: login, melihat profil sendiri, melihat dan mengedit data pribadi terbatas (nama, kontak), melihat daftar balita yang terhubung, melihat jadwal Posyandu & imunisasi, melihat riwayat kunjungan balita, melihat dan memperbarui data BPJS milik sendiri, mengunggah bukti kepesertaan (jika disediakan upload).
+- **Tidak boleh**: mengelola pengguna lain, memodifikasi data balita yang tidak terkait, mengubah jadwal Posyandu, mengakses laporan agregat wilayah, atau mengelola konfigurasi sistem.
+
+**Perbedaan dengan role lain**
+- **Admin**: memiliki CRUD master data wilayah/posyandu, manajemen pengguna, laporan wilayah; pasien hanya akses baca data milik sendiri.
+- **Bidan**: CRUD catatan kesehatan balita/ibu, validasi data, akses laporan pasien; pasien hanya baca riwayat dan lihat jadwal.
+- **Kader**: create/update data lapangan untuk balita wilayah, penandaan kehadiran; pasien hanya menerima informasi dan mengelola profilnya sendiri.
+
+**Perubahan database**
+- Jika menggunakan kolom `role` ENUM di tabel `users`:
+  ```sql
+  ALTER TABLE users
+    MODIFY role ENUM('super_admin','admin','bidan','kader','pasien') NOT NULL DEFAULT 'kader';
+  ```
+- Alternatif tabel `roles` + pivot `user_roles` (lebih fleksibel multi-role):
+  ```sql
+  CREATE TABLE roles (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    description VARCHAR(255)
+  );
+
+  CREATE TABLE user_roles (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    role_id INT UNSIGNED NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+    UNIQUE KEY user_role_unique (user_id, role_id)
+  );
+  ```
+
+**Flow login & otorisasi**
+- Pisahkan tampilan dashboard: jika role termasuk `admin/bidan/kader` tampilkan dashboard operasional (statistik, tugas input); jika `pasien` tampilkan portal keluarga (profil, balita, jadwal & riwayat).
+- Contoh pengecekan role (PHP native):
+  ```php
+  session_start();
+  if (!isset($_SESSION['user'])) { header('Location: login.php'); exit; }
+  $user = $_SESSION['user'];
+
+  function authorize(array $allowedRoles, $user) {
+      if (!in_array($user['role'], $allowedRoles, true)) {
+          http_response_code(403);
+          echo 'Akses ditolak';
+          exit;
+      }
+  }
+
+  // Contoh routing
+  if (strpos($_SERVER['REQUEST_URI'], '/dashboard/admin') === 0) {
+      authorize(['super_admin','admin','bidan','kader'], $user);
+      include 'dashboard_admin.php';
+  } else {
+      authorize(['pasien','bidan','kader','admin','super_admin'], $user);
+      include $user['role'] === 'pasien' ? 'dashboard_pasien.php' : 'dashboard_admin.php';
+  }
+  ```
+
+### 2. Desain Integrasi Data BPJS
+
+**Desain database**
+- Relasi: satu `users` (role pasien) memiliki satu `bpjs_profiles`; satu pasien dapat memiliki beberapa `balita` melalui FK `balita.user_id` (orang tua). `bpjs_profiles.user_id` mengacu ke akun pasien, bukan per balita.
+- Contoh tabel:
+  ```sql
+  CREATE TABLE bpjs_profiles (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    no_bpjs VARCHAR(30) NOT NULL,
+    status_bpjs ENUM('aktif','tidak_aktif','tidak_diketahui') DEFAULT 'tidak_diketahui',
+    jenis_bpjs ENUM('PBI','Mandiri','PPU','PPK','Lainnya') DEFAULT 'Lainnya',
+    faskes_tingkat_1 VARCHAR(150),
+    tanggal_validasi DATE,
+    keterangan TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_no_bpjs (no_bpjs),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+  ```
+
+**Form input & update BPJS (UI sederhana)**
+- Wajib: `no_bpjs`, `status_bpjs`, `jenis_bpjs`, `faskes_tingkat_1` (minimal nama klinik), `tanggal_validasi`.
+- Opsional: `keterangan`.
+- Contoh form HTML (pendaftaran pasien):
+  ```html
+  <form action="save_bpjs.php" method="post">
+    <label>No BPJS/KIS*</label><input name="no_bpjs" required>
+    <label>Status*</label>
+      <select name="status_bpjs">
+        <option value="aktif">Aktif</option>
+        <option value="tidak_aktif">Tidak Aktif</option>
+        <option value="tidak_diketahui">Tidak Diketahui</option>
+      </select>
+    <label>Jenis*</label>
+      <select name="jenis_bpjs">
+        <option>PBI</option><option>Mandiri</option><option>PPU</option><option>PPK</option><option>Lainnya</option>
+      </select>
+    <label>Faskes Tingkat 1*</label><input name="faskes_tingkat_1" required>
+    <label>Tanggal Validasi*</label><input type="date" name="tanggal_validasi" required>
+    <label>Keterangan</label><textarea name="keterangan"></textarea>
+    <button type="submit">Simpan</button>
+  </form>
+  ```
+- Contoh pemrosesan PHP (insert/update):
+  ```php
+  // save_bpjs.php
+  require 'db.php';
+  session_start();
+  $userId = $_SESSION['user']['id'];
+
+  $stmt = $pdo->prepare("REPLACE INTO bpjs_profiles (user_id, no_bpjs, status_bpjs, jenis_bpjs, faskes_tingkat_1, tanggal_validasi, keterangan)
+    VALUES (:user_id, :no_bpjs, :status_bpjs, :jenis_bpjs, :faskes, :tgl, :ket)");
+  $stmt->execute([
+    ':user_id' => $userId,
+    ':no_bpjs' => $_POST['no_bpjs'],
+    ':status_bpjs' => $_POST['status_bpjs'],
+    ':jenis_bpjs' => $_POST['jenis_bpjs'],
+    ':faskes' => $_POST['faskes_tingkat_1'],
+    ':tgl' => $_POST['tanggal_validasi'],
+    ':ket' => $_POST['keterangan'] ?? null,
+  ]);
+  header('Location: profil.php?success=bpjs');
+  ```
+
+**Penggunaan data BPJS di modul lain**
+- Profil pasien: tampilkan ringkasan status, faskes, tanggal validasi, dan tombol "Cek Status BPJS".
+- Riwayat kunjungan Posyandu: kolom `status_bpjs_saat_kunjungan` dapat diisi snapshot dari `bpjs_profiles.status_bpjs` saat kunjungan dicatat.
+- Contoh query daftar balita beserta status BPJS orang tua:
+  ```sql
+  SELECT b.id, b.nama_balita, b.tanggal_lahir, u.name AS nama_ortu, bp.status_bpjs
+  FROM balita b
+  JOIN users u ON b.user_id = u.id
+  LEFT JOIN bpjs_profiles bp ON bp.user_id = u.id;
+  ```
+- Contoh query detail pasien + BPJS:
+  ```sql
+  SELECT u.*, bp.no_bpjs, bp.status_bpjs, bp.jenis_bpjs, bp.faskes_tingkat_1, bp.tanggal_validasi, bp.keterangan
+  FROM users u
+  LEFT JOIN bpjs_profiles bp ON bp.user_id = u.id
+  WHERE u.id = ?;
+  ```
+
+### 3. Persiapan Integrasi API BPJS (Level Dasar)
+
+**Field tambahan yang disiapkan**
+- `bpjs_reference_id` (VARCHAR): ID referensi dari sistem BPJS/PCare.
+- `last_synced_at` atau `last_bpjs_check_at` (TIMESTAMP): waktu pengecekan terakhir.
+- `source_system` ENUM('manual','api'): asal data.
+- `last_response_payload` (JSON/TEXT opsional): menyimpan respon terakhir untuk audit.
+
+**Contoh fungsi cek status (pseudocode cURL)**
+```php
+function cekStatusBpjs($noBpjs) {
+  $ch = curl_init('https://api.bpjs-pcare.local/peserta');
+  $payload = json_encode(['no_bpjs' => $noBpjs]);
+  curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_HTTPHEADER => [
+      'Content-Type: application/json',
+      'Authorization: Bearer DUMMY_TOKEN',
+    ],
+    CURLOPT_POSTFIELDS => $payload,
+  ]);
+  $response = curl_exec($ch);
+  if ($response === false) { throw new Exception(curl_error($ch)); }
+  $data = json_decode($response, true);
+  curl_close($ch);
+
+  // Update database
+  $stmt = $pdo->prepare("UPDATE bpjs_profiles
+      SET status_bpjs = :status, jenis_bpjs = :jenis, faskes_tingkat_1 = :faskes,
+          bpjs_reference_id = :ref, last_bpjs_check_at = NOW(), source_system = 'api'
+      WHERE no_bpjs = :no_bpjs");
+  $stmt->execute([
+    ':status' => $data['status'] ?? 'tidak_diketahui',
+    ':jenis' => $data['jenis'] ?? 'Lainnya',
+    ':faskes' => $data['faskes'] ?? null,
+    ':ref' => $data['reference_id'] ?? null,
+    ':no_bpjs' => $noBpjs,
+  ]);
+  return $data;
+}
+```
+
+**Alur bisnis sederhana**
+1) Admin/bidan klik "Cek Status BPJS" pada profil pasien.
+2) Sistem memanggil fungsi cURL (atau API resmi) dengan parameter `no_bpjs`/NIK.
+3) Response JSON ditampilkan (status, jenis, faskes) dan tabel `bpjs_profiles` diupdate beserta timestamp sinkronisasi.
+
+### 4. Integrasi Role "Pasien" dengan Data BPJS
+- **Login & akses**: pasien login seperti role lain; middleware/guard mengarahkan ke `dashboard_pasien.php` yang memuat kartu profil, daftar balita, dan blok ringkasan BPJS.
+- **Relasi**: satu pasien → banyak balita (`balita.user_id = users.id`), satu `bpjs_profiles` → satu pasien.
+- **Query balita + status BPJS untuk pasien tertentu**:
+  ```sql
+  SELECT b.*, bp.status_bpjs, bp.no_bpjs
+  FROM balita b
+  JOIN users u ON u.id = b.user_id
+  LEFT JOIN bpjs_profiles bp ON bp.user_id = u.id
+  WHERE u.id = :pasien_id;
+  ```
+- **Portal pasien**: halaman profil menampilkan data pribadi, tabel anak, kartu BPJS (status, faskes, tanggal validasi), tombol ubah BPJS, dan riwayat kunjungan balita dengan kolom status BPJS saat kunjungan.
+
+### 5. Implementasi PHP Native (Langkah Konkret)
+
+**Struktur folder minimal**
+- `config/db.php`: koneksi PDO.
+- `auth/login.php`, `auth/logout.php`: proses login/logout.
+- `middleware/auth.php`: pengecekan session dan role guard.
+- `dashboard_admin.php`, `dashboard_pasien.php`: tampilan terpisah.
+- `bpjs/create.php`, `bpjs/update.php`: form & handler BPJS.
+- `balita/index.php`: daftar balita milik pasien (filtered by `user_id`).
+
+**Snippet middleware role guard**
+```php
+// middleware/auth.php
+session_start();
+if (!isset($_SESSION['user'])) {
+  header('Location: /auth/login.php');
+  exit;
+}
+
+function allowRoles(array $roles) {
+  $current = $_SESSION['user']['role'];
+  if (!in_array($current, $roles, true)) {
+    http_response_code(403);
+    echo 'Akses ditolak';
+    exit;
+  }
+}
+
+function redirectDashboard() {
+  $role = $_SESSION['user']['role'];
+  header('Location: ' . ($role === 'pasien' ? '/dashboard_pasien.php' : '/dashboard_admin.php'));
+  exit;
+}
+```
+
+**Contoh login handler (hash & session)**
+```php
+// auth/login.php
+require __DIR__.'/../config/db.php';
+session_start();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $stmt = $pdo->prepare('SELECT * FROM users WHERE email = :email AND is_active = 1 LIMIT 1');
+  $stmt->execute([':email' => $_POST['email']]);
+  $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+  if ($user && password_verify($_POST['password'], $user['password_hash'])) {
+    $_SESSION['user'] = $user;
+    redirectDashboard();
+  } else {
+    $error = 'Email atau password salah';
+  }
+}
+```
+
+**Template dashboard pasien (elemen kunci)**
+- Kartu ringkasan profil: nama, kontak, alamat, status akun.
+- Kartu BPJS: nomor, status, jenis, faskes, tanggal validasi, tombol "Ubah" & "Cek Status".
+- Tabel balita terkait: nama, tanggal lahir, jadwal imunisasi berikutnya, status kehadiran terakhir.
+- Riwayat kunjungan: tanggal kunjungan, berat/tinggi, status gizi, status BPJS saat kunjungan.
+
+Contoh skeleton HTML:
+```html
+<!-- dashboard_pasien.php -->
+<?php require 'middleware/auth.php'; allowRoles(['pasien']); ?>
+<h1>Halo, <?= htmlspecialchars($_SESSION['user']['name']) ?></h1>
+
+<section>
+  <h2>Data BPJS</h2>
+  <?php include 'bpjs/summary_card.php'; ?>
+  <a href="/bpjs/update.php" class="btn">Ubah BPJS</a>
+  <a href="/bpjs/check.php" class="btn">Cek Status BPJS</a>
+</section>
+
+<section>
+  <h2>Daftar Balita</h2>
+  <?php include 'balita/list.php'; ?>
+</section>
+```
+
+**Form BPJS (update)**
+```php
+// bpjs/update.php
+require __DIR__.'/../middleware/auth.php';
+require __DIR__.'/../config/db.php';
+allowRoles(['pasien']);
+
+$stmt = $pdo->prepare('SELECT * FROM bpjs_profiles WHERE user_id = :uid LIMIT 1');
+$stmt->execute([':uid' => $_SESSION['user']['id']]);
+$bpjs = $stmt->fetch(PDO::FETCH_ASSOC);
+?>
+<form method="post" action="/bpjs/save.php">
+  <input type="hidden" name="id" value="<?= $bpjs['id'] ?? '' ?>">
+  <label>No BPJS*</label><input name="no_bpjs" required value="<?= htmlspecialchars($bpjs['no_bpjs'] ?? '') ?>">
+  <label>Status*</label>
+  <select name="status_bpjs" required>
+    <?php foreach(['aktif','tidak_aktif','tidak_diketahui'] as $opt): ?>
+      <option value="<?= $opt ?>" <?= ($bpjs['status_bpjs'] ?? '') === $opt ? 'selected' : '' ?>><?= ucfirst(str_replace('_',' ', $opt)) ?></option>
+    <?php endforeach; ?>
+  </select>
+  <label>Jenis*</label>
+  <select name="jenis_bpjs" required>
+    <?php foreach(['PBI','Mandiri','PPU','PPK','Lainnya'] as $opt): ?>
+      <option value="<?= $opt ?>" <?= ($bpjs['jenis_bpjs'] ?? '') === $opt ? 'selected' : '' ?>><?= $opt ?></option>
+    <?php endforeach; ?>
+  </select>
+  <label>Faskes Tingkat 1*</label><input name="faskes_tingkat_1" required value="<?= htmlspecialchars($bpjs['faskes_tingkat_1'] ?? '') ?>">
+  <label>Tanggal Validasi*</label><input type="date" name="tanggal_validasi" required value="<?= htmlspecialchars($bpjs['tanggal_validasi'] ?? '') ?>">
+  <label>Keterangan</label><textarea name="keterangan"><?= htmlspecialchars($bpjs['keterangan'] ?? '') ?></textarea>
+  <button type="submit">Simpan</button>
+</form>
+```
+
+**Handler save BPJS (menghindari REPLACE jika ingin audit)**
+```php
+// bpjs/save.php
+require __DIR__.'/../middleware/auth.php';
+require __DIR__.'/../config/db.php';
+allowRoles(['pasien']);
+
+$sql = 'INSERT INTO bpjs_profiles
+  (user_id, no_bpjs, status_bpjs, jenis_bpjs, faskes_tingkat_1, tanggal_validasi, keterangan, source_system)
+  VALUES (:uid, :no, :status, :jenis, :faskes, :tgl, :ket, :source)
+  ON DUPLICATE KEY UPDATE
+    status_bpjs = VALUES(status_bpjs),
+    jenis_bpjs = VALUES(jenis_bpjs),
+    faskes_tingkat_1 = VALUES(faskes_tingkat_1),
+    tanggal_validasi = VALUES(tanggal_validasi),
+    keterangan = VALUES(keterangan),
+    source_system = VALUES(source_system),
+    updated_at = CURRENT_TIMESTAMP';
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute([
+  ':uid' => $_SESSION['user']['id'],
+  ':no' => $_POST['no_bpjs'],
+  ':status' => $_POST['status_bpjs'],
+  ':jenis' => $_POST['jenis_bpjs'],
+  ':faskes' => $_POST['faskes_tingkat_1'],
+  ':tgl' => $_POST['tanggal_validasi'],
+  ':ket' => $_POST['keterangan'] ?? null,
+  ':source' => 'manual',
+]);
+
+header('Location: /dashboard_pasien.php?success=bpjs');
+exit;
+```
+
+**Query riwayat kunjungan balita dengan status BPJS saat itu**
+```sql
+SELECT k.id, k.tanggal_kunjungan, k.berat, k.tinggi, k.status_gizi,
+       COALESCE(k.status_bpjs_saat_kunjungan, bp.status_bpjs) AS status_bpjs_kunjungan
+FROM kunjungan_balita k
+JOIN balita b ON b.id = k.balita_id
+JOIN users u ON u.id = b.user_id
+LEFT JOIN bpjs_profiles bp ON bp.user_id = u.id
+WHERE u.id = :pasien_id
+ORDER BY k.tanggal_kunjungan DESC;
+```
+
 ## Kesimpulan
 Rancangan ini memberikan kerangka komprehensif untuk membangun sistem informasi Posyandu berbasis web dengan fitur-fitur kunci yang dibutuhkan Puskesmas. Dengan arsitektur fullstack, manajemen data terpusat, dan fitur reminder serta pelaporan otomatis, Puskesmas dapat meningkatkan akurasi pencatatan dan pengambilan keputusan berbasis data.

@@ -15,9 +15,20 @@ class User extends BaseModel
         return $stmt->fetchAll();
     }
 
-    public function create(array $data): void
+    public function create(array $data): int
     {
         $stmt = $this->db->prepare('INSERT INTO users (name, email, password, role) VALUES (:name, :email, :password, :role)');
         $stmt->execute($data);
+
+        return (int) $this->db->lastInsertId();
+    }
+
+    public function updatePassword(int $id, string $passwordHash): void
+    {
+        $stmt = $this->db->prepare('UPDATE users SET password = :password WHERE id = :id');
+        $stmt->execute([
+            'password' => $passwordHash,
+            'id' => $id,
+        ]);
     }
 }

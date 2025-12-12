@@ -19,4 +19,32 @@ class Measurement extends BaseModel
         $stmt = $this->db->prepare('INSERT INTO measurements (resident_id, weight, height, muac, nutritional_status, notes, measured_at) VALUES (:resident_id, :weight, :height, :muac, :nutritional_status, :notes, :measured_at)');
         $stmt->execute($data);
     }
+
+    public function latestByResidents(array $residentIds): array
+    {
+        if (empty($residentIds)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($residentIds), '?'));
+
+        $sql = "SELECT m.* FROM measurements m
+                JOIN (
+                    SELECT resident_id, MAX(measured_at) AS last_date
+                    FROM measurements
+                    WHERE resident_id IN ($placeholders)
+                    GROUP BY resident_id
+                ) latest ON latest.resident_id = m.resident_id AND latest.last_date = m.measured_at";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($residentIds);
+        $rows = $stmt->fetchAll();
+
+        $results = [];
+        foreach ($rows as $row) {
+            $results[(int)$row['resident_id']] = $row;
+        }
+
+        return $results;
+    }
 }
