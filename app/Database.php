@@ -59,7 +59,10 @@ class Database
             'users', 'residents', 'bpjs_profiles', 'patient_children', 'measurements', 'immunizations', 'reminders'
         ];
 
-        if (!self::isMissingTables($pdo, $requiredTables)) {
+        $hasMissingTables = self::isMissingTables($pdo, $requiredTables);
+
+        if (!$hasMissingTables) {
+            self::ensureDefaultUsers($pdo);
             return;
         }
 
@@ -168,14 +171,7 @@ CREATE TABLE IF NOT EXISTS reminders (
 SQL);
 
         $pdo->exec('SET FOREIGN_KEY_CHECKS=1');
-
-        // Seed minimal accounts so login pages work out-of-the-box
-        $seedPassword = '$2y$10$zO80yAGP82LPgAvFp8Z64eiUm7Uxr87hcPLZ9eczsQnUnxE27XGr2'; // "password"
-        $pdo->exec(<<<SQL
-INSERT IGNORE INTO users (name, email, password, role) VALUES
-('Super Admin', 'super@posyandu.test', '{$seedPassword}', 'super_admin'),
-('Ibu Pasien', 'pasien@posyandu.test', '{$seedPassword}', 'pasien');
-SQL);
+        self::ensureDefaultUsers($pdo);
     }
 
     private static function isMissingTables(\PDO $pdo, array $tables): bool
@@ -188,5 +184,35 @@ SQL);
         $existing = (int)$stmt->fetchColumn();
 
         return $existing < count($tables);
+    }
+
+    private static function ensureDefaultUsers(\PDO $pdo): void
+    {
+        // Password hash for the literal string "password"
+        $seedPassword = '$2y$10$zO80yAGP82LPgAvFp8Z64eiUm7Uxr87hcPLZ9eczsQnUnxE27XGr2';
+
+        $defaults = [
+            ['name' => 'Super Admin', 'email' => 'super@posyandu.test', 'role' => 'super_admin'],
+            ['name' => 'Ibu Pasien', 'email' => 'pasien@posyandu.test', 'role' => 'pasien'],
+        ];
+
+        $stmt = $pdo->prepare('SELECT id FROM users WHERE email = :email LIMIT 1');
+        $insert = $pdo->prepare('INSERT INTO users (name, email, password, role) VALUES (:name, :email, :password, :role)');
+
+        foreach ($defaults as $user) {
+            $stmt->execute(['email' => $user['email']]);
+            $exists = $stmt->fetchColumn();
+
+            if ($exists) {
+                continue;
+            }
+
+            $insert->execute([
+                'name' => $user['name'],
+                'email' => $user['email'],
+                'password' => $seedPassword,
+                'role' => $user['role'],
+            ]);
+        }
     }
 }
