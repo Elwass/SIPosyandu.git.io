@@ -181,8 +181,20 @@ class FulfillmentController
 
     public function paymentCreate(): void
     {
-        require_role(['pasien']);
         header('Content-Type: application/json');
+
+        if (!is_logged_in()) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Harus login sebagai pasien']);
+            return;
+        }
+
+        $user = user();
+        if (($user['role'] ?? '') !== 'pasien') {
+            http_response_code(403);
+            echo json_encode(['error' => 'Hanya pasien yang dapat membuat pembayaran']);
+            return;
+        }
 
         try {
             $payload = json_decode(file_get_contents('php://input'), true) ?? [];
@@ -197,7 +209,6 @@ class FulfillmentController
                 return;
             }
 
-            $user = user();
             $residentIds = $this->residentIdsForUser((int) $user['id']);
 
             $recommendationModel = new Recommendation();
