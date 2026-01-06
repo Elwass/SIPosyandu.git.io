@@ -31,7 +31,10 @@ Tambahkan variabel lingkungan berikut (contoh di file `.env` atau konfigurasi se
 MIDTRANS_SERVER_KEY=your-server-key
 MIDTRANS_CLIENT_KEY=your-client-key
 MIDTRANS_IS_PRODUCTION=false
+MIDTRANS_MERCHANT_ID=your-merchant-id
 ```
+
+Nilai bawaan di `app/config.php` menggunakan placeholder (`__MIDTRANS_CLIENT_KEY__`, dll). Gantilah dengan kredensial asli sebelum menjalankan pembayaran di lingkungan produksi.
 
 ### Uji Webhook Midtrans
 
