@@ -10,11 +10,11 @@
         <form method="post" action="<?= url('?page=admin-recommendations-store') ?>" class="surface-card">
             <div class="surface-body">
                 <div class="mb-3">
-                    <label class="form-label">Pilih Pasien</label>
-                    <select name="patient_id" class="form-select" required>
-                        <option value="">-- Pilih Pasien --</option>
+                    <label class="form-label">Pilih Warga</label>
+                    <select name="resident_id" class="form-select" required>
+                        <option value="">-- Pilih Warga --</option>
                         <?php foreach ($patients as $patient): ?>
-                            <option value="<?= $patient['id'] ?>"><?= htmlspecialchars($patient['name']) ?></option>
+                            <option value="<?= $patient['id'] ?>"><?= htmlspecialchars($patient['name']) ?> (<?= htmlspecialchars($patient['category']) ?>) - <?= htmlspecialchars($patient['nik']) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>

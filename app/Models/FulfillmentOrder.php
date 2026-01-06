@@ -4,10 +4,10 @@ class FulfillmentOrder extends BaseModel
 {
     public function create(array $data): int
     {
-        $stmt = $this->db->prepare('INSERT INTO fulfillment_orders (recommendation_id, patient_id, fulfillment_method, address, delivery_fee, total_amount, payment_status, midtrans_order_id) VALUES (:recommendation_id, :patient_id, :fulfillment_method, :address, :delivery_fee, :total_amount, :payment_status, :midtrans_order_id)');
+        $stmt = $this->db->prepare('INSERT INTO fulfillment_orders (recommendation_id, resident_id, fulfillment_method, address, delivery_fee, total_amount, payment_status, midtrans_order_id) VALUES (:recommendation_id, :resident_id, :fulfillment_method, :address, :delivery_fee, :total_amount, :payment_status, :midtrans_order_id)');
         $stmt->execute([
             'recommendation_id' => $data['recommendation_id'],
-            'patient_id' => $data['patient_id'],
+            'resident_id' => $data['resident_id'],
             'fulfillment_method' => $data['fulfillment_method'],
             'address' => $data['address'],
             'delivery_fee' => $data['delivery_fee'],
@@ -21,7 +21,7 @@ class FulfillmentOrder extends BaseModel
 
     public function findWithRecommendation(int $id): ?array
     {
-        $stmt = $this->db->prepare('SELECT fo.*, r.patient_id, r.notes, r.status AS recommendation_status FROM fulfillment_orders fo JOIN recommendations r ON r.id = fo.recommendation_id WHERE fo.id = :id LIMIT 1');
+        $stmt = $this->db->prepare('SELECT fo.*, r.resident_id, r.notes, r.status AS recommendation_status FROM fulfillment_orders fo JOIN recommendations r ON r.id = fo.recommendation_id WHERE fo.id = :id LIMIT 1');
         $stmt->execute(['id' => $id]);
         $order = $stmt->fetch();
         return $order ?: null;
@@ -39,16 +39,16 @@ class FulfillmentOrder extends BaseModel
         $stmt->execute(['midtrans_order_id' => $midtransOrderId, 'id' => $id]);
     }
 
-    public function listByPatient(int $patientId): array
+    public function listByResident(int $residentId): array
     {
-        $stmt = $this->db->prepare('SELECT fo.*, r.notes, r.status AS recommendation_status FROM fulfillment_orders fo JOIN recommendations r ON r.id = fo.recommendation_id WHERE fo.patient_id = :patient_id ORDER BY fo.created_at DESC');
-        $stmt->execute(['patient_id' => $patientId]);
+        $stmt = $this->db->prepare('SELECT fo.*, r.notes, r.status AS recommendation_status FROM fulfillment_orders fo JOIN recommendations r ON r.id = fo.recommendation_id WHERE fo.resident_id = :resident_id ORDER BY fo.created_at DESC');
+        $stmt->execute(['resident_id' => $residentId]);
         return $stmt->fetchAll();
     }
 
     public function listAll(): array
     {
-        $query = 'SELECT fo.*, r.notes, r.status AS recommendation_status, u.name AS patient_name FROM fulfillment_orders fo JOIN recommendations r ON r.id = fo.recommendation_id JOIN users u ON u.id = fo.patient_id ORDER BY fo.created_at DESC';
+        $query = 'SELECT fo.*, r.notes, r.status AS recommendation_status, res.name AS resident_name, res.nik, res.phone FROM fulfillment_orders fo JOIN recommendations r ON r.id = fo.recommendation_id JOIN residents res ON res.id = fo.resident_id ORDER BY fo.created_at DESC';
         return $this->db->query($query)->fetchAll();
     }
 }

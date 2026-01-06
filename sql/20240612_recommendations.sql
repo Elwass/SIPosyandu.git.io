@@ -5,13 +5,14 @@ CREATE TABLE IF NOT EXISTS medicines (
     unit VARCHAR(50) NOT NULL,
     price INT NOT NULL DEFAULT 0,
     stock INT NULL,
+    image VARCHAR(255) NULL,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS recommendations (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    patient_id INT NOT NULL,
+    resident_id INT NOT NULL,
     admin_id INT NOT NULL,
     notes TEXT NULL,
     status ENUM('SENT','CONFIRMED','FULFILLED','CANCELLED') NOT NULL DEFAULT 'SENT',
@@ -30,7 +31,7 @@ CREATE TABLE IF NOT EXISTS recommendation_items (
 CREATE TABLE IF NOT EXISTS fulfillment_orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     recommendation_id INT NOT NULL,
-    patient_id INT NOT NULL,
+    resident_id INT NOT NULL,
     fulfillment_method ENUM('PICKUP','DELIVERY','SELF_BUY') NOT NULL,
     address TEXT NULL,
     delivery_fee INT NOT NULL DEFAULT 0,

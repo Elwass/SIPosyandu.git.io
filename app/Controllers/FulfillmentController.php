@@ -16,7 +16,8 @@ class FulfillmentController
     {
         require_role(['pasien']);
         $user = user();
-        $orders = $this->fulfillments->listByPatient($user['id']);
+        $residentId = $this->residentIdForUser((int) $user['id']);
+        $orders = $residentId ? $this->fulfillments->listByResident($residentId) : [];
         include __DIR__ . '/../Views/patient/fulfillment_orders.php';
     }
 
@@ -52,7 +53,7 @@ class FulfillmentController
 
         $id = $this->fulfillments->create([
             'recommendation_id' => $recommendationId,
-            'patient_id' => $recommendation['patient_id'],
+            'resident_id' => $recommendation['resident_id'],
             'fulfillment_method' => $method,
             'address' => $address,
             'delivery_fee' => $deliveryFee,
@@ -117,8 +118,9 @@ class FulfillmentController
             ],
             'item_details' => $items,
             'customer_details' => [
-                'first_name' => $recommendation['patient_name'] ?? 'Pasien',
+                'first_name' => $recommendation['resident_name'] ?? 'Pasien',
                 'email' => '',
+                'phone' => $recommendation['phone'] ?? '',
             ],
         ];
 
@@ -175,5 +177,14 @@ class FulfillmentController
 
         http_response_code(500);
         echo json_encode(['message' => 'Gagal memeriksa status pembayaran']);
+    }
+
+    private function residentIdForUser(int $userId): ?int
+    {
+        $db = Database::getInstance();
+        $stmt = $db->prepare('SELECT resident_id FROM patient_children WHERE user_id = :user LIMIT 1');
+        $stmt->execute(['user' => $userId]);
+        $row = $stmt->fetch();
+        return $row ? (int) $row['resident_id'] : null;
     }
 }

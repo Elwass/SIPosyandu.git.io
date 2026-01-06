@@ -2,16 +2,21 @@
 
 class Recommendation extends BaseModel
 {
-    public function forPatient(int $patientId): array
+    public function forResidents(array $residentIds): array
     {
-        $stmt = $this->db->prepare('SELECT * FROM recommendations WHERE patient_id = :patient ORDER BY created_at DESC');
-        $stmt->execute(['patient' => $patientId]);
+        if (!$residentIds) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($residentIds), '?'));
+        $stmt = $this->db->prepare("SELECT * FROM recommendations WHERE resident_id IN ($placeholders) ORDER BY created_at DESC");
+        $stmt->execute($residentIds);
         return $stmt->fetchAll();
     }
 
     public function findWithItems(int $id): ?array
     {
-        $stmt = $this->db->prepare('SELECT r.*, u.name AS patient_name FROM recommendations r JOIN users u ON u.id = r.patient_id WHERE r.id = :id LIMIT 1');
+        $stmt = $this->db->prepare('SELECT r.*, res.name AS resident_name, res.nik, res.category, res.phone FROM recommendations r JOIN residents res ON res.id = r.resident_id WHERE r.id = :id LIMIT 1');
         $stmt->execute(['id' => $id]);
         $header = $stmt->fetch();
         if (!$header) {
@@ -28,9 +33,9 @@ class Recommendation extends BaseModel
     public function create(array $data, array $items): int
     {
         $this->db->beginTransaction();
-        $stmt = $this->db->prepare('INSERT INTO recommendations (patient_id, admin_id, notes, status) VALUES (:patient_id, :admin_id, :notes, :status)');
+        $stmt = $this->db->prepare('INSERT INTO recommendations (resident_id, admin_id, notes, status) VALUES (:resident_id, :admin_id, :notes, :status)');
         $stmt->execute([
-            'patient_id' => $data['patient_id'],
+            'resident_id' => $data['resident_id'],
             'admin_id' => $data['admin_id'],
             'notes' => $data['notes'],
             'status' => $data['status'] ?? 'SENT',

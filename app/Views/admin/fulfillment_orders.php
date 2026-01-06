@@ -15,7 +15,7 @@
                             <thead>
                                 <tr>
                                     <th>ID</th>
-                                    <th>Pasien</th>
+                                    <th>Warga</th>
                                     <th>Metode</th>
                                     <th>Status Pembayaran</th>
                                     <th>Total</th>
@@ -27,7 +27,7 @@
                                 <?php foreach ($orders as $order): ?>
                                     <tr>
                                         <td>#<?= htmlspecialchars($order['id']) ?></td>
-                                        <td><?= htmlspecialchars($order['patient_name']) ?></td>
+                                        <td><?= htmlspecialchars($order['resident_name']) ?></td>
                                         <td><?= htmlspecialchars($order['fulfillment_method']) ?></td>
                                         <td><span class="badge bg-soft-primary text-primary"><?= htmlspecialchars($order['payment_status']) ?></span></td>
                                         <td>Rp <?= number_format((int) $order['total_amount'], 0, ',', '.') ?></td>

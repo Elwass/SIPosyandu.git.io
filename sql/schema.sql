@@ -179,12 +179,12 @@ CREATE TABLE payments (
 
 CREATE TABLE recommendations (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    patient_id INT NOT NULL,
+    resident_id INT NOT NULL,
     admin_id INT NOT NULL,
     notes TEXT NULL,
     status ENUM('SENT','CONFIRMED','FULFILLED','CANCELLED') NOT NULL DEFAULT 'SENT',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_rec_patient FOREIGN KEY (patient_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_rec_resident FOREIGN KEY (resident_id) REFERENCES residents(id) ON DELETE CASCADE,
     CONSTRAINT fk_rec_admin FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -202,7 +202,7 @@ CREATE TABLE recommendation_items (
 CREATE TABLE fulfillment_orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     recommendation_id INT NOT NULL,
-    patient_id INT NOT NULL,
+    resident_id INT NOT NULL,
     fulfillment_method ENUM('PICKUP','DELIVERY','SELF_BUY') NOT NULL,
     address TEXT NULL,
     delivery_fee INT NOT NULL DEFAULT 0,
@@ -211,7 +211,7 @@ CREATE TABLE fulfillment_orders (
     midtrans_order_id VARCHAR(190) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_fulfillment_rec FOREIGN KEY (recommendation_id) REFERENCES recommendations(id) ON DELETE CASCADE,
-    CONSTRAINT fk_fulfillment_patient FOREIGN KEY (patient_id) REFERENCES users(id) ON DELETE CASCADE
+    CONSTRAINT fk_fulfillment_resident FOREIGN KEY (resident_id) REFERENCES residents(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO users (name, email, password, role) VALUES

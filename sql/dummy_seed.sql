@@ -4,6 +4,8 @@
 -- TRUNCATE TABLE fulfillment_orders;
 -- TRUNCATE TABLE recommendation_items;
 -- TRUNCATE TABLE recommendations;
+-- TRUNCATE TABLE patient_children;
+-- TRUNCATE TABLE residents;
 -- TRUNCATE TABLE medicines;
 -- SET FOREIGN_KEY_CHECKS=1;
 
@@ -19,6 +21,28 @@ INSERT INTO users (id, name, email, password, role) VALUES
     (9, 'Pasien Rafi', 'rafi@example.com', '$2y$10$zO80yAGP82LPgAvFp8Z64eiUm7Uxr87hcPLZ9eczsQnUnxE27XGr2', 'pasien'),
     (10, 'Pasien Nia', 'nia@example.com', '$2y$10$zO80yAGP82LPgAvFp8Z64eiUm7Uxr87hcPLZ9eczsQnUnxE27XGr2', 'pasien');
 
+INSERT INTO residents (id, name, nik, family_number, address, phone, birth_date, gender, category, created_at) VALUES
+    (1, 'Sinta Dewi', '3276010101010001', '3276012200010001', 'Jl. Melati No. 1', '0811111111', '1995-02-10', 'female', 'pregnant', '2024-07-01 07:00:00'),
+    (2, 'Budi Santoso', '3276010101010002', '3276012200010002', 'Jl. Kenanga No. 2', '0812222222', '1988-05-12', 'male', 'elderly', '2024-07-01 07:05:00'),
+    (3, 'Rina Lestari', '3276010101010003', '3276012200010003', 'Jl. Mawar No. 3', '0813333333', '1990-03-05', 'female', 'pregnant', '2024-07-01 07:10:00'),
+    (4, 'Dedi Pratama', '3276010101010004', '3276012200010004', 'Jl. Flamboyan No. 4', '0814444444', '1992-09-22', 'male', 'elderly', '2024-07-01 07:15:00'),
+    (5, 'Maya Putri', '3276010101010005', '3276012200010005', 'Jl. Dahlia No. 5', '0815555555', '2019-08-18', 'female', 'toddler', '2024-07-01 07:20:00'),
+    (6, 'Lila Anggraini', '3276010101010006', '3276012200010006', 'Jl. Anggrek No. 6', '0816666666', '2020-11-30', 'female', 'toddler', '2024-07-01 07:25:00'),
+    (7, 'Rafi Akbar', '3276010101010007', '3276012200010007', 'Jl. Kemuning No. 7', '0817777777', '1985-12-11', 'male', 'elderly', '2024-07-01 07:30:00'),
+    (8, 'Nia Widya', '3276010101010008', '3276012200010008', 'Jl. Teratai No. 8', '0818888888', '1998-06-06', 'female', 'pregnant', '2024-07-01 07:35:00'),
+    (9, 'Asep Saputra', '3276010101010009', '3276012200010009', 'Jl. Angsana No. 9', '0819999999', '1980-04-04', 'male', 'elderly', '2024-07-01 07:40:00'),
+    (10, 'Dian Ayu', '3276010101010010', '3276012200010010', 'Jl. Puspa No. 10', '0810000000', '2018-10-01', 'female', 'toddler', '2024-07-01 07:45:00');
+
+INSERT INTO patient_children (user_id, resident_id) VALUES
+    (3, 1),
+    (4, 2),
+    (5, 3),
+    (6, 4),
+    (7, 5),
+    (8, 6),
+    (9, 7),
+    (10, 8);
+
 INSERT INTO medicines (id, name, unit, price, stock, image, is_active, created_at) VALUES
     (1, 'Paracetamol 500mg', 'tablet', 5000, 100, 'uploads/medicines/paracetamol.jpg', 1, '2024-07-01 08:00:00'),
     (2, 'Vitamin C 500mg', 'tablet', 7000, 80, 'uploads/medicines/vitamin-c.jpg', 1, '2024-07-01 08:05:00'),
@@ -31,17 +55,17 @@ INSERT INTO medicines (id, name, unit, price, stock, image, is_active, created_a
     (9, 'Betadine Solution', 'botol', 25000, 50, 'uploads/medicines/betadine.jpg', 1, '2024-07-01 08:40:00'),
     (10, 'Krim Hydrocortisone', 'tube', 22000, 35, 'uploads/medicines/hydrocortisone.jpg', 1, '2024-07-01 08:45:00');
 
-INSERT INTO recommendations (id, patient_id, admin_id, notes, status, created_at) VALUES
-    (1, 3, 1, 'Keluhan demam ringan dan nyeri kepala.', 'SENT', '2024-07-02 09:00:00'),
-    (2, 4, 2, 'Batuk pilek, butuh antibiotik dan vitamin.', 'CONFIRMED', '2024-07-02 09:30:00'),
-    (3, 5, 1, 'Diare ringan, hidrasi dan bronkodilator.', 'SENT', '2024-07-02 10:00:00'),
-    (4, 6, 2, 'Alergi musiman, butuh antihistamin.', 'FULFILLED', '2024-07-02 10:30:00'),
-    (5, 7, 1, 'Nyeri sendi, butuh analgesik.', 'SENT', '2024-07-02 11:00:00'),
-    (6, 8, 2, 'Luka ringan, butuh antiseptik.', 'CANCELLED', '2024-07-02 11:30:00'),
-    (7, 9, 1, 'Flu ringan, butuh penurun panas.', 'CONFIRMED', '2024-07-02 12:00:00'),
-    (8, 10, 2, 'Diare sedang, butuh oralit dan antiinflamasi.', 'SENT', '2024-07-02 12:30:00'),
-    (9, 3, 1, 'Asma ringan, butuh bronkodilator dan antihistamin.', 'SENT', '2024-07-02 13:00:00'),
-    (10, 4, 2, 'Demam dan infeksi bakteri ringan.', 'SENT', '2024-07-02 13:30:00');
+INSERT INTO recommendations (id, resident_id, admin_id, notes, status, created_at) VALUES
+    (1, 1, 1, 'Keluhan demam ringan dan nyeri kepala.', 'SENT', '2024-07-02 09:00:00'),
+    (2, 2, 2, 'Batuk pilek, butuh antibiotik dan vitamin.', 'CONFIRMED', '2024-07-02 09:30:00'),
+    (3, 3, 1, 'Diare ringan, hidrasi dan bronkodilator.', 'SENT', '2024-07-02 10:00:00'),
+    (4, 4, 2, 'Alergi musiman, butuh antihistamin.', 'FULFILLED', '2024-07-02 10:30:00'),
+    (5, 5, 1, 'Nyeri sendi, butuh analgesik.', 'SENT', '2024-07-02 11:00:00'),
+    (6, 6, 2, 'Luka ringan, butuh antiseptik.', 'CANCELLED', '2024-07-02 11:30:00'),
+    (7, 7, 1, 'Flu ringan, butuh penurun panas.', 'CONFIRMED', '2024-07-02 12:00:00'),
+    (8, 8, 2, 'Diare sedang, butuh oralit dan antiinflamasi.', 'SENT', '2024-07-02 12:30:00'),
+    (9, 9, 1, 'Asma ringan, butuh bronkodilator dan antihistamin.', 'SENT', '2024-07-02 13:00:00'),
+    (10, 10, 2, 'Demam dan infeksi bakteri ringan.', 'SENT', '2024-07-02 13:30:00');
 
 INSERT INTO recommendation_items (recommendation_id, medicine_id, qty, dosage, note) VALUES
     (1, 1, 2, '2x1 tablet per hari setelah makan', 'Jika demam >38.5C'),
@@ -64,14 +88,14 @@ INSERT INTO recommendation_items (recommendation_id, medicine_id, qty, dosage, n
     (10, 2, 2, '1x1 tablet per hari', NULL),
     (10, 4, 1, '3x1 kapsul per hari', NULL);
 
-INSERT INTO fulfillment_orders (id, recommendation_id, patient_id, fulfillment_method, address, delivery_fee, total_amount, payment_status, midtrans_order_id, created_at) VALUES
-    (1, 1, 3, 'PICKUP', NULL, 0, 17000, 'PENDING', 'POSYANDU-MED-1-1710001', '2024-07-02 14:00:00'),
-    (2, 2, 4, 'DELIVERY', 'Jl. Melati No.12, Kota A', 8000, 26000, 'PAID', 'POSYANDU-MED-2-1710002', '2024-07-02 14:10:00'),
-    (3, 3, 5, 'SELF_BUY', NULL, 0, 23000, 'UNPAID', NULL, '2024-07-02 14:20:00'),
-    (4, 4, 6, 'PICKUP', NULL, 0, 18000, 'PAID', 'POSYANDU-MED-4-1710004', '2024-07-02 14:30:00'),
-    (5, 5, 7, 'DELIVERY', 'Jl. Kenanga No.9, Kota B', 10000, 50000, 'FAILED', 'POSYANDU-MED-5-1710005', '2024-07-02 14:40:00'),
-    (6, 6, 8, 'PICKUP', NULL, 0, 32000, 'UNPAID', NULL, '2024-07-02 14:50:00'),
-    (7, 7, 9, 'PICKUP', NULL, 0, 8000, 'PENDING', 'POSYANDU-MED-7-1710007', '2024-07-02 15:00:00'),
-    (8, 8, 10, 'DELIVERY', 'Jl. Anggrek No.5, Kota C', 7000, 28000, 'PAID', 'POSYANDU-MED-8-1710008', '2024-07-02 15:10:00'),
-    (9, 9, 3, 'PICKUP', NULL, 0, 48000, 'PENDING', 'POSYANDU-MED-9-1710009', '2024-07-02 15:20:00'),
-    (10, 10, 4, 'SELF_BUY', NULL, 0, 26000, 'UNPAID', NULL, '2024-07-02 15:30:00');
+INSERT INTO fulfillment_orders (id, recommendation_id, resident_id, fulfillment_method, address, delivery_fee, total_amount, payment_status, midtrans_order_id, created_at) VALUES
+    (1, 1, 1, 'PICKUP', NULL, 0, 17000, 'PENDING', 'POSYANDU-MED-1-1710001', '2024-07-02 14:00:00'),
+    (2, 2, 2, 'DELIVERY', 'Jl. Melati No.12, Kota A', 8000, 26000, 'PAID', 'POSYANDU-MED-2-1710002', '2024-07-02 14:10:00'),
+    (3, 3, 3, 'SELF_BUY', NULL, 0, 23000, 'UNPAID', NULL, '2024-07-02 14:20:00'),
+    (4, 4, 4, 'PICKUP', NULL, 0, 18000, 'PAID', 'POSYANDU-MED-4-1710004', '2024-07-02 14:30:00'),
+    (5, 5, 5, 'DELIVERY', 'Jl. Kenanga No.9, Kota B', 10000, 50000, 'FAILED', 'POSYANDU-MED-5-1710005', '2024-07-02 14:40:00'),
+    (6, 6, 6, 'PICKUP', NULL, 0, 32000, 'UNPAID', NULL, '2024-07-02 14:50:00'),
+    (7, 7, 7, 'PICKUP', NULL, 0, 8000, 'PENDING', 'POSYANDU-MED-7-1710007', '2024-07-02 15:00:00'),
+    (8, 8, 8, 'DELIVERY', 'Jl. Anggrek No.5, Kota C', 7000, 28000, 'PAID', 'POSYANDU-MED-8-1710008', '2024-07-02 15:10:00'),
+    (9, 9, 9, 'PICKUP', NULL, 0, 48000, 'PENDING', 'POSYANDU-MED-9-1710009', '2024-07-02 15:20:00'),
+    (10, 10, 10, 'SELF_BUY', NULL, 0, 26000, 'UNPAID', NULL, '2024-07-02 15:30:00');

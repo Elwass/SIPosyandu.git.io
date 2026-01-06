@@ -28,6 +28,31 @@
                 </div>
                 <div class="surface-card mb-3">
                     <div class="surface-header">
+                        <h5 class="mb-0">Data Warga</h5>
+                    </div>
+                    <div class="surface-body">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <p class="mb-1 text-muted">Nama</p>
+                                <p class="fw-semibold mb-0"><?= htmlspecialchars($recommendation['resident_name'] ?? '-') ?></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1 text-muted">Kategori</p>
+                                <p class="fw-semibold mb-0 text-uppercase"><?= htmlspecialchars($recommendation['category'] ?? '-') ?></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1 text-muted">NIK</p>
+                                <p class="fw-semibold mb-0"><?= htmlspecialchars($recommendation['nik'] ?? '-') ?></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1 text-muted">Telepon</p>
+                                <p class="fw-semibold mb-0"><?= htmlspecialchars($recommendation['phone'] ?? '-') ?></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="surface-card mb-3">
+                    <div class="surface-header">
                         <h5 class="mb-0">Detail Obat</h5>
                     </div>
                     <div class="surface-body">

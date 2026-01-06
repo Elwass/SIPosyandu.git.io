@@ -16,7 +16,10 @@
                             <thead>
                                 <tr>
                                     <th>Kode</th>
-                                    <th>Pasien</th>
+                                    <th>Warga</th>
+                                    <th>NIK</th>
+                                    <th>Kategori</th>
+                                    <th>Telepon</th>
                                     <th>Status</th>
                                     <th>Dibuat</th>
                                     <th></th>
@@ -26,7 +29,10 @@
                                 <?php foreach ($list as $row): ?>
                                     <tr>
                                         <td>REC-<?= $row['id'] ?></td>
-                                        <td><?= htmlspecialchars($row['patient_name']) ?></td>
+                                        <td><?= htmlspecialchars($row['resident_name']) ?></td>
+                                        <td><?= htmlspecialchars($row['nik']) ?></td>
+                                        <td><?= htmlspecialchars($row['category']) ?></td>
+                                        <td><?= htmlspecialchars($row['phone']) ?></td>
                                         <td><span class="badge bg-soft-primary text-primary"><?= htmlspecialchars($row['status']) ?></span></td>
                                         <td><?= date('d M Y H:i', strtotime($row['created_at'])) ?></td>
                                         <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="<?= url('?page=recommendation-detail&id=' . $row['id']) ?>">Detail</a></td>
