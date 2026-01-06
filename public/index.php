@@ -9,6 +9,7 @@ $productController = new ProductController();
 $cartController = new CartController();
 $orderController = new OrderController();
 $midtransWebhook = new MidtransWebhookController();
+$checkoutController = new CheckoutController();
 
 switch ($page) {
     case 'landing':
@@ -72,6 +73,11 @@ switch ($page) {
         break;
     case 'checkout':
         $orderController->checkoutForm();
+        break;
+    case 'checkout-create-payment':
+        if ($method === 'POST') {
+            $checkoutController->createPayment();
+        }
         break;
     case 'orders-checkout':
         if ($method === 'POST') {

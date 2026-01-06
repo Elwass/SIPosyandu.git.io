@@ -16,7 +16,7 @@
                     <div class="surface-card">
                         <div class="surface-header"><h4>Detail Pengambilan</h4></div>
                         <div class="surface-body">
-                            <form method="post" action="<?= url('?page=orders-checkout') ?>">
+                            <form id="checkout-form">
                                 <div class="mb-3">
                                     <label class="form-label">Metode</label>
                                     <select class="form-select" name="pickup_method" id="pickup_method">
@@ -28,7 +28,8 @@
                                     <label class="form-label">Alamat Pengiriman</label>
                                     <textarea name="address" class="form-control" rows="3" placeholder="Tulis alamat lengkap"></textarea>
                                 </div>
-                                <button class="btn btn-primary" type="submit">Lanjutkan Pembayaran</button>
+                                <button class="btn btn-primary" type="submit" id="pay-button">Lanjutkan Pembayaran</button>
+                                <div class="small text-muted mt-2" id="payment-status" style="display:none;"></div>
                             </form>
                         </div>
                     </div>
@@ -57,8 +58,12 @@
     </div>
 </section>
 <script>
+    const snapClientKey = '<?= htmlspecialchars(config('midtrans.client_key', '')) ?>';
     const pickupSelect = document.getElementById('pickup_method');
     const deliveryField = document.getElementById('delivery_address');
+    const checkoutForm = document.getElementById('checkout-form');
+    const payButton = document.getElementById('pay-button');
+    const paymentStatus = document.getElementById('payment-status');
     if (pickupSelect) {
         const toggleAddress = () => {
             deliveryField.style.display = pickupSelect.value === 'DELIVERY' ? 'block' : 'none';
@@ -66,5 +71,58 @@
         pickupSelect.addEventListener('change', toggleAddress);
         toggleAddress();
     }
+
+    if (checkoutForm) {
+        checkoutForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!snapClientKey) {
+                alert('Client key Midtrans belum dikonfigurasi.');
+                return;
+            }
+
+            payButton.disabled = true;
+            paymentStatus.style.display = 'block';
+            paymentStatus.textContent = 'Memulai pembayaran...';
+
+            try {
+                const response = await fetch('<?= url('?page=checkout-create-payment') ?>', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        pickup_method: pickupSelect.value,
+                        address: deliveryField.querySelector('textarea').value
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok || !data.token) {
+                    throw new Error(data.error || 'Gagal memulai pembayaran');
+                }
+
+                window.snap.pay(data.token, {
+                    onSuccess: function () {
+                        window.location.href = '<?= url('?page=orders') ?>';
+                    },
+                    onPending: function () {
+                        window.location.href = '<?= url('?page=orders') ?>';
+                    },
+                    onError: function () {
+                        window.location.href = '<?= url('?page=orders') ?>';
+                    },
+                    onClose: function () {
+                        paymentStatus.textContent = 'Popup ditutup sebelum menyelesaikan pembayaran.';
+                        payButton.disabled = false;
+                    }
+                });
+            } catch (err) {
+                paymentStatus.textContent = err.message;
+                payButton.disabled = false;
+            }
+        });
+    }
 </script>
+<script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="<?= htmlspecialchars(config('midtrans.client_key', '')) ?>"></script>
 <?php include __DIR__ . '/../layouts/footer.php'; ?>
