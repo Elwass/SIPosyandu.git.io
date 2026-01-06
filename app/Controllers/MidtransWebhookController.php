@@ -21,7 +21,8 @@ class MidtransWebhookController
             return;
         }
 
-        $serverKey = config('midtrans.server_key', '');
+        $appConfig = require __DIR__ . '/../config.php';
+        $serverKey = $appConfig['midtrans']['server_key'] ?? '';
         if ($serverKey === '') {
             http_response_code(500);
             echo 'Server key missing';

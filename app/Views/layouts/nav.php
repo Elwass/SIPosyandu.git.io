@@ -18,9 +18,8 @@ $baseLandingUrl = url('?page=landing');
                     <ul class="navbar-nav ms-auto align-items-lg-center">
                         <?php if ($currentUser['role'] === 'pasien'): ?>
                             <li class="nav-item"><a class="nav-link <?= $currentPage === 'patient-dashboard' ? 'active' : '' ?>" href="<?= url('?page=patient-dashboard') ?>">Dashboard</a></li>
-                            <li class="nav-item"><a class="nav-link <?= $currentPage === 'products' ? 'active' : '' ?>" href="<?= url('?page=products') ?>">Produk</a></li>
-                            <li class="nav-item"><a class="nav-link <?= $currentPage === 'cart' ? 'active' : '' ?>" href="<?= url('?page=cart') ?>">Keranjang</a></li>
-                            <li class="nav-item"><a class="nav-link <?= in_array($currentPage, ['orders', 'order-detail'], true) ? 'active' : '' ?>" href="<?= url('?page=orders') ?>">Pesanan</a></li>
+                            <li class="nav-item"><a class="nav-link <?= str_starts_with($currentPage, 'recommendation') ? 'active' : '' ?>" href="<?= url('?page=recommendations') ?>">Rekomendasi</a></li>
+                            <li class="nav-item"><a class="nav-link <?= $currentPage === 'fulfillment-orders' ? 'active' : '' ?>" href="<?= url('?page=fulfillment-orders') ?>">Pemenuhan</a></li>
                             <li class="nav-item"><a class="nav-link <?= $currentPage === 'patient-profile' ? 'active' : '' ?>" href="<?= url('?page=patient-profile') ?>">Profil & BPJS</a></li>
                         <?php else: ?>
                             <li class="nav-item"><a class="nav-link <?= $currentPage === 'dashboard' ? 'active' : '' ?>" href="<?= url('?page=dashboard') ?>">Dashboard</a></li>
@@ -29,10 +28,10 @@ $baseLandingUrl = url('?page=landing');
                             <li class="nav-item"><a class="nav-link <?= $currentPage === 'immunizations' ? 'active' : '' ?>" href="<?= url('?page=immunizations') ?>">Imunisasi</a></li>
                             <li class="nav-item"><a class="nav-link <?= $currentPage === 'reminders' ? 'active' : '' ?>" href="<?= url('?page=reminders') ?>">Reminder</a></li>
                             <li class="nav-item"><a class="nav-link <?= $currentPage === 'reports' ? 'active' : '' ?>" href="<?= url('?page=reports') ?>">Laporan</a></li>
-                            <?php if (in_array($currentUser['role'], ['super_admin'], true)): ?>
-                                <li class="nav-item"><a class="nav-link <?= str_starts_with($currentPage, 'admin-products') ? 'active' : '' ?>" href="<?= url('?page=admin-products') ?>">Produk</a></li>
-                                <li class="nav-item"><a class="nav-link <?= str_starts_with($currentPage, 'admin-orders') ? 'active' : '' ?>" href="<?= url('?page=admin-orders') ?>">Pesanan</a></li>
-                                <li class="nav-item"><a class="nav-link <?= $currentPage === 'admin-sales-report' ? 'active' : '' ?>" href="<?= url('?page=admin-sales-report') ?>">Penjualan</a></li>
+                            <?php if (in_array($currentUser['role'], ['super_admin', 'admin'], true)): ?>
+                                <li class="nav-item"><a class="nav-link <?= $currentPage === 'medicines' || str_starts_with($currentPage, 'admin-medicines') ? 'active' : '' ?>" href="<?= url('?page=medicines') ?>">Obat</a></li>
+                                <li class="nav-item"><a class="nav-link <?= $currentPage === 'recommendations' || str_starts_with($currentPage, 'admin-recommendations') ? 'active' : '' ?>" href="<?= url('?page=recommendations') ?>">Rekomendasi</a></li>
+                                <li class="nav-item"><a class="nav-link <?= $currentPage === 'fulfillment-orders' ? 'active' : '' ?>" href="<?= url('?page=fulfillment-orders') ?>">Pemenuhan</a></li>
                                 <li class="nav-item"><a class="nav-link <?= $currentPage === 'users' ? 'active' : '' ?>" href="<?= url('?page=users') ?>">Pengguna</a></li>
                             <?php endif; ?>
                         <?php endif; ?>
