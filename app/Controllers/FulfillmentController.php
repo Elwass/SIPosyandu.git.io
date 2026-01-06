@@ -12,6 +12,21 @@ class FulfillmentController
         $this->fulfillments = new FulfillmentOrder();
     }
 
+    public function patientIndex(): void
+    {
+        require_role(['pasien']);
+        $user = user();
+        $orders = $this->fulfillments->listByPatient($user['id']);
+        include __DIR__ . '/../Views/patient/fulfillment_orders.php';
+    }
+
+    public function adminIndex(): void
+    {
+        require_role(['super_admin', 'admin']);
+        $orders = $this->fulfillments->listAll();
+        include __DIR__ . '/../Views/admin/fulfillment_orders.php';
+    }
+
     public function create(): void
     {
         require_role(['pasien']);

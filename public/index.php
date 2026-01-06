@@ -89,6 +89,17 @@ switch ($page) {
     case 'patient-child-store':
         (new PatientController())->storeChild();
         break;
+    case 'medicines':
+        if (!is_logged_in()) {
+            redirect('?page=login');
+        }
+        if (in_array(user()['role'], ['super_admin', 'admin'], true)) {
+            $medicineController->adminIndex();
+        } else {
+            http_response_code(404);
+            include __DIR__ . '/../app/Views/errors/404.php';
+        }
+        break;
     case 'products':
         $productController->catalog();
         break;
@@ -137,6 +148,20 @@ switch ($page) {
         break;
     case 'recommendation-detail':
         $recommendationController->patientDetail();
+        break;
+    case 'recommendations':
+        if (!is_logged_in()) {
+            redirect('?page=login');
+        }
+        $user = user();
+        if ($user['role'] === 'pasien') {
+            $recommendationController->patientList();
+        } elseif (in_array($user['role'], ['super_admin', 'admin'], true)) {
+            $recommendationController->adminIndex();
+        } else {
+            http_response_code(404);
+            include __DIR__ . '/../app/Views/errors/404.php';
+        }
         break;
     case 'residents':
         if (!is_logged_in()) {
@@ -230,6 +255,20 @@ switch ($page) {
     case 'admin-medicines-update':
         if ($method === 'POST') {
             $medicineController->update();
+        }
+        break;
+    case 'fulfillment-orders':
+        if (!is_logged_in()) {
+            redirect('?page=login');
+        }
+        $user = user();
+        if ($user['role'] === 'pasien') {
+            $fulfillmentController->patientIndex();
+        } elseif (in_array($user['role'], ['super_admin', 'admin'], true)) {
+            $fulfillmentController->adminIndex();
+        } else {
+            http_response_code(404);
+            include __DIR__ . '/../app/Views/errors/404.php';
         }
         break;
     case 'admin-recommendations':
