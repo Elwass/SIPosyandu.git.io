@@ -334,6 +334,7 @@ SQL);
 
         $defaults = [
             ['name' => 'Super Admin', 'email' => 'super@posyandu.test', 'role' => 'super_admin'],
+            ['name' => 'Admin Posyandu', 'email' => 'admin@posyandu.test', 'role' => 'admin'],
             ['name' => 'Ibu Pasien', 'email' => 'pasien@posyandu.test', 'role' => 'pasien'],
         ];
 

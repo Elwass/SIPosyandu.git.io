@@ -49,6 +49,16 @@ class RecommendationController
     {
         require_role(['super_admin', 'admin']);
         $admin = user();
+        $db = Database::getInstance();
+        $adminCheck = $db->prepare('SELECT id FROM users WHERE id = :id AND role IN (\'super_admin\', \'admin\') LIMIT 1');
+        $adminCheck->execute(['id' => $admin['id'] ?? 0]);
+        $adminRow = $adminCheck->fetch();
+
+        if (!$adminRow) {
+            flash('error', 'Admin yang membuat rekomendasi tidak ditemukan. Silakan login ulang sebagai admin.');
+            redirect('?page=login');
+        }
+
         $residentId = (int) ($_POST['resident_id'] ?? 0);
         $notes = $_POST['notes'] ?? '';
         $items = $_POST['items'] ?? [];
@@ -68,7 +78,7 @@ class RecommendationController
         if ($residentId && $preparedItems) {
             $id = $this->recommendations->create([
                 'resident_id' => $residentId,
-                'admin_id' => $admin['id'],
+                'admin_id' => (int) $adminRow['id'],
                 'notes' => $notes,
                 'status' => 'SENT',
             ], $preparedItems);
