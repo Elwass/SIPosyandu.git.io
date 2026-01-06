@@ -56,7 +56,8 @@ class Database
     private static function ensureSchema(\PDO $pdo, string $charset): void
     {
         $requiredTables = [
-            'users', 'residents', 'bpjs_profiles', 'patient_children', 'measurements', 'immunizations', 'reminders'
+            'users', 'residents', 'bpjs_profiles', 'patient_children', 'measurements', 'immunizations', 'reminders',
+            'products', 'orders', 'order_items', 'payments'
         ];
 
         $hasMissingTables = self::isMissingTables($pdo, $requiredTables);
@@ -167,6 +168,68 @@ CREATE TABLE IF NOT EXISTS reminders (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (resident_id) REFERENCES residents(id) ON DELETE CASCADE,
     FOREIGN KEY (immunization_id) REFERENCES immunizations(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE=utf8mb4_unicode_ci;
+SQL);
+
+        $pdo->exec(<<<SQL
+CREATE TABLE IF NOT EXISTS products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    sku VARCHAR(80) NOT NULL UNIQUE,
+    price DECIMAL(12,2) NOT NULL DEFAULT 0,
+    stock INT NOT NULL DEFAULT 0,
+    description TEXT NULL,
+    image_url VARCHAR(255) NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE=utf8mb4_unicode_ci;
+SQL);
+
+        $pdo->exec(<<<SQL
+CREATE TABLE IF NOT EXISTS orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    pickup_method ENUM('PICKUP', 'DELIVERY') NOT NULL DEFAULT 'PICKUP',
+    address TEXT NULL,
+    total_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+    payment_status ENUM('UNPAID', 'PAID', 'EXPIRED', 'CANCELLED', 'REFUNDED') NOT NULL DEFAULT 'UNPAID',
+    fulfillment_status ENUM('DIPROSES', 'SIAP_DIAMBIL', 'DIKIRIM', 'SELESAI') NOT NULL DEFAULT 'DIPROSES',
+    stock_deducted TINYINT(1) NOT NULL DEFAULT 0,
+    snap_token VARCHAR(255) NULL,
+    snap_redirect_url VARCHAR(500) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE=utf8mb4_unicode_ci;
+SQL);
+
+        $pdo->exec(<<<SQL
+CREATE TABLE IF NOT EXISTS order_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    price DECIMAL(12,2) NOT NULL,
+    subtotal DECIMAL(12,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    CONSTRAINT fk_order_items_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE=utf8mb4_unicode_ci;
+SQL);
+
+        $pdo->exec(<<<SQL
+CREATE TABLE IF NOT EXISTS payments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    transaction_id VARCHAR(120) NULL,
+    midtrans_order_id VARCHAR(120) NULL,
+    status VARCHAR(50) NOT NULL,
+    signature_key VARCHAR(255) NULL,
+    raw_response LONGTEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_payments_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE=utf8mb4_unicode_ci;
 SQL);
 

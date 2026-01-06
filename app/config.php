@@ -14,5 +14,10 @@ return [
         'base_url' => getenv('APP_BASE_URL') ?: '',
         'name' => 'SI Posyandu',
         'timezone' => getenv('APP_TIMEZONE') ?: 'Asia/Jakarta'
+    ],
+    'midtrans' => [
+        'server_key' => getenv('MIDTRANS_SERVER_KEY') ?: '',
+        'client_key' => getenv('MIDTRANS_CLIENT_KEY') ?: '',
+        'is_production' => getenv('MIDTRANS_IS_PRODUCTION') === 'true'
     ]
 ];
