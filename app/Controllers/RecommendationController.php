@@ -26,9 +26,9 @@ class RecommendationController
         $id = (int) ($_GET['id'] ?? 0);
         $recommendation = $this->recommendations->findWithItems($id);
         $latestOrder = null;
+        $user = user();
 
         if ($recommendation) {
-            $user = user();
             if ($user['role'] === 'pasien') {
                 $residentIds = $this->residentIdsForUser((int) $user['id']);
                 if ($residentIds && !in_array((int) $recommendation['resident_id'], $residentIds, true)) {
@@ -41,7 +41,11 @@ class RecommendationController
             $fulfillment = new FulfillmentOrder();
             $latestOrder = $fulfillment->latestForRecommendation($recommendation['id']);
         }
-        include __DIR__ . '/../Views/patient/recommendation_detail.php';
+        if ($user['role'] === 'pasien') {
+            include __DIR__ . '/../Views/patient/recommendation_detail.php';
+        } else {
+            include __DIR__ . '/../Views/admin/recommendation_detail.php';
+        }
     }
 
     public function adminIndex(): void
@@ -103,6 +107,21 @@ class RecommendationController
         }
 
         redirect('?page=admin-recommendations-create');
+    }
+
+    public function updateStatus(): void
+    {
+        require_role(['super_admin', 'admin']);
+        $id = (int) ($_POST['recommendation_id'] ?? 0);
+        $status = strtoupper(trim((string) ($_POST['status'] ?? '')));
+        $allowed = ['SENT', 'CONFIRMED', 'FULFILLED', 'CANCELLED'];
+
+        if (!$id || !in_array($status, $allowed, true)) {
+            redirect('?page=recommendation-detail&id=' . $id);
+        }
+
+        $this->recommendations->updateStatus($id, $status);
+        redirect('?page=recommendation-detail&id=' . $id);
     }
 
     private function residentIdsForUser(int $userId): array

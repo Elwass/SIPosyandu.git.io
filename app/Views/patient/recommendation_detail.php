@@ -1,9 +1,7 @@
 <?php include __DIR__ . '/../layouts/header.php'; ?>
 <?php
-$appConfig = app_config();
-$clientKey = $appConfig['midtrans']['client_key'] ?? '';
-$isProduction = (bool) ($appConfig['midtrans']['is_production'] ?? false);
-$snapUrl = $isProduction ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js';
+$user = user();
+$isPatient = ($user['role'] ?? '') === 'pasien';
 $initialPaymentStatus = $latestOrder['payment_status'] ?? 'UNPAID';
 $currentFulfillmentId = $latestOrder['id'] ?? null;
 $currentFulfillmentMethod = $latestOrder['fulfillment_method'] ?? null;
@@ -106,9 +104,9 @@ $currentFulfillmentMethod = $latestOrder['fulfillment_method'] ?? null;
                 </div>
             </div>
             <div class="col-lg-4">
-                <div class="surface-card mb-3">
+                <div class="surface-card" id="payment-card">
                     <div class="surface-header">
-                        <h5 class="mb-0">Proses Rekomendasi</h5>
+                        <h5 class="mb-0">Pemenuhan & Pembayaran</h5>
                     </div>
                     <div class="surface-body">
                         <form id="fulfillment-form">
@@ -125,24 +123,20 @@ $currentFulfillmentMethod = $latestOrder['fulfillment_method'] ?? null;
                                 <label class="form-label">Alamat Pengantaran</label>
                                 <textarea class="form-control" name="address" rows="3" placeholder="Alamat lengkap"></textarea>
                             </div>
-                            <button class="btn btn-primary w-100" type="submit" id="process-button">Bayar Sekarang</button>
+                            <div class="mb-3">
+                                <p class="mb-1 text-muted">Total</p>
+                                <h5 class="mb-0">Rp<?= number_format($subtotal, 0, ',', '.') ?></h5>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-success" id="pay-button" type="submit">Bayar Sekarang</button>
+                                <button class="btn btn-outline-secondary" id="refresh-button" type="button" <?= $currentFulfillmentId ? '' : 'disabled' ?>>Perbarui Status</button>
+                                <?php if ($currentFulfillmentId): ?>
+                                    <a class="btn btn-outline-primary" href="<?= url('?page=order-payment-detail&id=' . $currentFulfillmentId) ?>">Lihat Detail Pesanan</a>
+                                <?php endif; ?>
+                            </div>
+                            <small class="text-muted d-block mt-2">Pembayaran online hanya diproses di halaman detail pesanan.</small>
                         </form>
-                    </div>
-                </div>
-                <div class="surface-card">
-                    <div class="surface-header">
-                        <h5 class="mb-0">Pembayaran</h5>
-                    </div>
-                    <div class="surface-body">
-                        <?php if (!$clientKey): ?>
-                            <div class="alert alert-danger">Client Key Midtrans belum diisi di app/config.php</div>
-                        <?php endif; ?>
-                        <p class="mb-2">Total: <strong id="payment-total">Rp<?= number_format($subtotal, 0, ',', '.') ?></strong></p>
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-success" id="pay-button" type="button">Bayar Sekarang</button>
-                            <button class="btn btn-outline-secondary" id="refresh-button" type="button" <?= $currentFulfillmentId ? '' : 'disabled' ?>>Refresh Status</button>
-                        </div>
-                        <small class="text-muted d-block mt-2">Pembayaran online berlaku untuk Pickup & Delivery.</small>
+                        <div class="alert alert-info d-none mt-3 mb-0" id="self-buy-info">Metode <strong>Self Buy</strong> dipilih. Silakan beli obat secara mandiri sesuai rekomendasi.</div>
                     </div>
                 </div>
             </div>
@@ -150,53 +144,50 @@ $currentFulfillmentMethod = $latestOrder['fulfillment_method'] ?? null;
         <?php endif; ?>
     </div>
 </section>
-<?php if ($clientKey): ?>
-<script src="<?= $snapUrl ?>" data-client-key="<?= htmlspecialchars($clientKey) ?>"></script>
-<?php endif; ?>
+<?php if ($isPatient): ?>
 <script>
 const form = document.getElementById('fulfillment-form');
 const payButton = document.getElementById('pay-button');
 const refreshButton = document.getElementById('refresh-button');
 const fulfillmentMethod = document.getElementById('fulfillment_method');
 const deliveryAddress = document.getElementById('delivery-address');
+const selfBuyInfo = document.getElementById('self-buy-info');
 const recommendationStatusEl = document.getElementById('recommendation-status');
+const paymentStatusEl = document.getElementById('payment-status');
+const detailBaseUrl = '<?= url('?page=order-payment-detail&id=') ?>';
 let currentOrderId = <?= $currentFulfillmentId ? (int) $currentFulfillmentId : 'null' ?>;
-let paymentStatusEl = document.getElementById('payment-status');
-let hasClientKey = Boolean("<?= $clientKey ?>");
 
-fulfillmentMethod.addEventListener('change', () => {
-    if (fulfillmentMethod.value === 'DELIVERY') {
+function toggleFulfillmentUi() {
+    const method = fulfillmentMethod.value;
+    if (method === 'DELIVERY') {
         deliveryAddress.classList.remove('d-none');
     } else {
         deliveryAddress.classList.add('d-none');
     }
 
-    if (!hasClientKey && fulfillmentMethod.value !== 'SELF_BUY') {
-        payButton.disabled = true;
-    } else if (!payButton.disabled) {
-        payButton.disabled = false;
+    if (method === 'SELF_BUY') {
+        selfBuyInfo.classList.remove('d-none');
+        payButton.textContent = 'Simpan & Lihat Pesanan';
+    } else {
+        selfBuyInfo.classList.add('d-none');
+        payButton.textContent = 'Bayar Sekarang';
     }
-});
-
-function setPayButtonLoading(isLoading) {
-    const requiresGateway = fulfillmentMethod.value !== 'SELF_BUY';
-    payButton.disabled = isLoading || (requiresGateway && !hasClientKey);
-    payButton.textContent = isLoading ? 'Memproses...' : 'Bayar Sekarang';
 }
 
-async function createPaymentAndPay(eventSource = 'button') {
-    if (!hasClientKey && fulfillmentMethod.value !== 'SELF_BUY') {
-        alert('Client key Midtrans belum dikonfigurasi.');
-        return;
-    }
+function setButtonState(loading = false) {
+    const paid = paymentStatusEl.textContent.toUpperCase() === 'PAID';
+    payButton.disabled = loading || paid;
+}
 
+async function createOrderAndRedirect() {
+    setButtonState(true);
     const payload = {
         recommendation_id: form.recommendation_id.value,
         fulfillment_method: fulfillmentMethod.value,
-        address: form.address ? form.address.value : ''
+        address: form.address ? form.address.value : '',
+        request_snap: false
     };
 
-    setPayButtonLoading(true);
     try {
         const res = await fetch('<?= url('?action=payment-create') ?>', {
             method: 'POST',
@@ -208,85 +199,36 @@ async function createPaymentAndPay(eventSource = 'button') {
             throw new Error(data.error || 'Gagal membuat pembayaran');
         }
 
-        currentOrderId = data.fulfillment_order_id || currentOrderId;
-        paymentStatusEl.textContent = data.token ? 'PENDING' : 'UNPAID';
-        refreshButton.disabled = !currentOrderId;
-
-        if (!data.token) {
-            alert('Pesanan tercatat. Silakan proses pembelian mandiri.');
-            return;
+        currentOrderId = data.fulfillment_order_id || data.order_id || currentOrderId;
+        if (!currentOrderId) {
+            throw new Error('Pesanan belum terbentuk.');
         }
 
-        if (typeof window.snap === 'undefined') {
-            alert('Snap.js belum termuat. Periksa konfigurasi client key.');
-            return;
-        }
-
-        window.snap.pay(data.token, {
-            onSuccess: function () { syncStatus(); },
-            onPending: function () { paymentStatusEl.textContent = 'PENDING'; },
-            onError: function () { alert('Pembayaran gagal. Coba lagi.'); },
-            onClose: function () { setPayButtonLoading(false); }
-        });
+        window.location = detailBaseUrl + currentOrderId;
     } catch (error) {
         alert(error.message);
-    } finally {
-        if (eventSource !== 'snap-close') {
-            setPayButtonLoading(false);
-        }
-    }
-}
-
-async function syncStatus(showAlert = false) {
-    if (!currentOrderId) {
-        if (showAlert) alert('Belum ada pesanan yang dibuat.');
-        return;
-    }
-
-    try {
-        const res = await fetch('<?= url('?action=payment-sync-status') ?>', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fulfillment_order_id: currentOrderId })
-        });
-        const data = await res.json();
-        if (!res.ok) {
-            throw new Error(data.error || 'Gagal cek status');
-        }
-        paymentStatusEl.textContent = data.payment_status;
-        if (data.recommendation_status) {
-            recommendationStatusEl.textContent = data.recommendation_status;
-        }
-        if (showAlert) {
-            alert('Status diperbarui: ' + data.payment_status);
-        }
-    } catch (error) {
-        alert(error.message);
+        setButtonState(false);
     }
 }
 
 form.addEventListener('submit', (e) => {
     e.preventDefault();
-    createPaymentAndPay();
-});
-
-payButton.addEventListener('click', () => {
-    createPaymentAndPay();
+    createOrderAndRedirect();
 });
 
 refreshButton.addEventListener('click', () => {
-    syncStatus(true);
+    if (!currentOrderId) {
+        alert('Belum ada pesanan yang dibuat.');
+        return;
+    }
+    window.location = detailBaseUrl + currentOrderId;
 });
 
-if (!hasClientKey) {
-    const requiresGateway = fulfillmentMethod.value !== 'SELF_BUY';
-    if (requiresGateway) {
-        payButton.disabled = true;
-    }
-}
-
+toggleFulfillmentUi();
+setButtonState(false);
 <?php if ($currentFulfillmentId): ?>
 refreshButton.disabled = false;
 <?php endif; ?>
 </script>
+<?php endif; ?>
 <?php include __DIR__ . '/../layouts/footer.php'; ?>

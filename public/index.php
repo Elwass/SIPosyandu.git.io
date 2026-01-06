@@ -53,6 +53,11 @@ if ($action) {
                 $fulfillmentController->syncStatus();
             }
             break;
+        case 'recommendation-update-status':
+            if ($method === 'POST') {
+                $recommendationController->updateStatus();
+            }
+            break;
         default:
             http_response_code(404);
             include __DIR__ . '/../app/Views/errors/404.php';
@@ -160,6 +165,9 @@ switch ($page) {
         break;
     case 'order-detail':
         $orderController->orderDetail();
+        break;
+    case 'order-payment-detail':
+        $fulfillmentController->orderPaymentDetail();
         break;
     case 'patient-recommendations':
         $recommendationController->patientList();

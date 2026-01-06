@@ -181,26 +181,58 @@ class FulfillmentController
 
     public function paymentCreate(): void
     {
-        require_role(['pasien']);
         header('Content-Type: application/json');
+
+        if (!is_logged_in()) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Harus login sebagai pasien']);
+            return;
+        }
+
+        $user = user();
+        if (($user['role'] ?? '') !== 'pasien') {
+            http_response_code(403);
+            echo json_encode(['error' => 'Hanya pasien yang dapat membuat pembayaran']);
+            return;
+        }
 
         try {
             $payload = json_decode(file_get_contents('php://input'), true) ?? [];
             $recommendationId = (int) ($payload['recommendation_id'] ?? 0);
             $method = strtoupper(trim((string) ($payload['fulfillment_method'] ?? '')));
+            $fulfillmentId = (int) ($payload['fulfillment_order_id'] ?? 0);
+            $requestSnap = !empty($payload['request_snap']);
             $address = $method === 'DELIVERY' ? trim((string) ($payload['address'] ?? '')) : null;
             $deliveryFee = $method === 'DELIVERY' ? max(0, (int) ($payload['delivery_fee'] ?? 0)) : 0;
 
-            if (!$recommendationId || !in_array($method, ['PICKUP', 'DELIVERY', 'SELF_BUY'], true)) {
+            if (!in_array($method, ['PICKUP', 'DELIVERY', 'SELF_BUY'], true)) {
                 http_response_code(400);
                 echo json_encode(['error' => 'Permintaan tidak valid']);
                 return;
             }
 
-            $user = user();
             $residentIds = $this->residentIdsForUser((int) $user['id']);
 
             $recommendationModel = new Recommendation();
+            $order = null;
+            if ($fulfillmentId) {
+                $order = $this->fulfillments->findWithRecommendation($fulfillmentId);
+                if (!$order) {
+                    http_response_code(404);
+                    echo json_encode(['error' => 'Pesanan tidak ditemukan']);
+                    return;
+                }
+                $recommendationId = $recommendationId ?: (int) $order['recommendation_id'];
+                $method = $order['fulfillment_method'];
+                $deliveryFee = (int) $order['delivery_fee'];
+            }
+
+            if (!$recommendationId) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Rekomendasi tidak valid']);
+                return;
+            }
+
             $recommendation = $recommendationModel->findWithItems($recommendationId);
             if (!$recommendation) {
                 http_response_code(404);
@@ -214,8 +246,14 @@ class FulfillmentController
                 return;
             }
 
+            if ($order && (int) $order['resident_id'] !== (int) $recommendation['resident_id']) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Pesanan tidak sesuai dengan pasien']);
+                return;
+            }
+
             [$items, $subtotal] = $this->buildSnapItems($recommendation);
-            $totalAmount = $subtotal + $deliveryFee;
+            $totalAmount = $order ? (int) $order['total_amount'] : ($subtotal + $deliveryFee);
 
             if ($totalAmount <= 0) {
                 http_response_code(400);
@@ -224,7 +262,7 @@ class FulfillmentController
             }
 
             if ($method === 'SELF_BUY') {
-                $orderId = $this->fulfillments->create([
+                $orderId = $order['id'] ?? $this->fulfillments->create([
                     'recommendation_id' => $recommendationId,
                     'resident_id' => $recommendation['resident_id'],
                     'fulfillment_method' => $method,
@@ -243,6 +281,32 @@ class FulfillmentController
                 return;
             }
 
+            if (!$requestSnap) {
+                $orderId = $order['id'] ?? $this->fulfillments->create([
+                    'recommendation_id' => $recommendationId,
+                    'resident_id' => $recommendation['resident_id'],
+                    'fulfillment_method' => $method,
+                    'address' => $address,
+                    'delivery_fee' => $deliveryFee,
+                    'total_amount' => $totalAmount,
+                    'payment_status' => 'UNPAID',
+                    'midtrans_order_id' => null,
+                ]);
+
+                echo json_encode([
+                    'token' => null,
+                    'order_id' => null,
+                    'fulfillment_order_id' => $orderId,
+                ]);
+                return;
+            }
+
+            if ($order && strtoupper($order['payment_status']) === 'PAID') {
+                http_response_code(400);
+                echo json_encode(['error' => 'Pesanan sudah dibayar']);
+                return;
+            }
+
             $appConfig = require __DIR__ . '/../config.php';
             $serverKey = $appConfig['midtrans']['server_key'] ?? '';
             $clientKey = $appConfig['midtrans']['client_key'] ?? '';
@@ -257,6 +321,8 @@ class FulfillmentController
             Config::$isSanitized = true;
             Config::$is3ds = true;
 
+            $cache = $this->loadSnapCache();
+
             if ($method === 'DELIVERY' && $deliveryFee > 0) {
                 $items[] = [
                     'id' => 'DELIVERY',
@@ -266,7 +332,7 @@ class FulfillmentController
                 ];
             }
 
-            $midtransOrderId = 'POSYANDU-MED-' . $recommendationId . '-' . time();
+            $midtransOrderId = $order['midtrans_order_id'] ?? $this->generateUniqueMidtransId($recommendationId);
             $payloadSnap = [
                 'transaction_details' => [
                     'order_id' => $midtransOrderId,
@@ -280,31 +346,62 @@ class FulfillmentController
                 ],
             ];
 
-            $fulfillmentOrderId = $this->fulfillments->create([
-                'recommendation_id' => $recommendationId,
-                'resident_id' => $recommendation['resident_id'],
-                'fulfillment_method' => $method,
-                'address' => $address,
-                'delivery_fee' => $deliveryFee,
-                'total_amount' => $totalAmount,
-                'payment_status' => 'PENDING',
-                'midtrans_order_id' => $midtransOrderId,
-            ]);
-
-            $snapResponse = Snap::getSnapToken($payloadSnap);
-            if (!$snapResponse || empty($snapResponse['token'])) {
-                http_response_code(500);
-                echo json_encode(['error' => 'Gagal membuat pembayaran']);
+            if (!empty($cache[$midtransOrderId]['token']) && (($cache[$midtransOrderId]['created_at'] ?? 0) > (time() - 86400))) {
+                echo json_encode([
+                    'token' => $cache[$midtransOrderId]['token'],
+                    'order_id' => $midtransOrderId,
+                    'fulfillment_order_id' => $order['id'] ?? $fulfillmentId,
+                ]);
                 return;
             }
 
+            if ($order) {
+                $this->fulfillments->updateMidtransOrder($fulfillmentId, $midtransOrderId);
+                $this->fulfillments->updateStatus($fulfillmentId, 'PENDING');
+                $fulfillmentOrderId = $fulfillmentId;
+            } else {
+                $fulfillmentOrderId = $this->fulfillments->create([
+                    'recommendation_id' => $recommendationId,
+                    'resident_id' => $recommendation['resident_id'],
+                    'fulfillment_method' => $method,
+                    'address' => $address,
+                    'delivery_fee' => $deliveryFee,
+                    'total_amount' => $totalAmount,
+                    'payment_status' => 'PENDING',
+                    'midtrans_order_id' => $midtransOrderId,
+                ]);
+            }
+
+            $snapResponse = Snap::getSnapToken($payloadSnap);
+            $token = is_array($snapResponse) ? ($snapResponse['token'] ?? null) : $snapResponse;
+            if (!$token) {
+                $errorMessage = is_array($snapResponse) ? ($snapResponse['status_message'] ?? 'Gagal membuat pembayaran') : 'Gagal membuat pembayaran';
+                $this->logMidtransError('snap-token-failed', [
+                    'order_id' => $midtransOrderId,
+                    'payload' => $payloadSnap,
+                    'response' => $snapResponse,
+                ]);
+                http_response_code(500);
+                echo json_encode(['error' => $errorMessage]);
+                return;
+            }
+
+            $cache[$midtransOrderId] = [
+                'token' => $token,
+                'created_at' => time(),
+                'fulfillment_order_id' => $fulfillmentOrderId,
+            ];
+            $this->saveSnapCache($cache);
+
             echo json_encode([
-                'token' => $snapResponse['token'],
+                'token' => $token,
                 'order_id' => $midtransOrderId,
                 'fulfillment_order_id' => $fulfillmentOrderId,
             ]);
         } catch (Throwable $e) {
-            error_log($e->getMessage());
+            $this->logMidtransError('payment-create-exception', [
+                'message' => $e->getMessage(),
+            ]);
             http_response_code(500);
             echo json_encode(['error' => 'Terjadi kesalahan saat membuat pembayaran']);
         }
@@ -343,6 +440,7 @@ class FulfillmentController
                 echo json_encode([
                     'payment_status' => $order['payment_status'],
                     'recommendation_status' => $order['recommendation_status'],
+                    'redirect_url' => url('?page=order-payment-detail&id=' . $fulfillmentId),
                 ]);
                 return;
             }
@@ -367,8 +465,14 @@ class FulfillmentController
             curl_close($ch);
 
             if ($statusCode < 200 || $statusCode >= 300 || !$response) {
+                $this->logMidtransError('sync-status-failed', [
+                    'fulfillment_order_id' => $fulfillmentId,
+                    'order_id' => $order['midtrans_order_id'],
+                    'status_code' => $statusCode,
+                    'response' => $response,
+                ]);
                 http_response_code(500);
-                echo json_encode(['error' => 'Gagal memeriksa status pembayaran']);
+                echo json_encode(['error' => 'Gagal memeriksa status pembayaran (' . $statusCode . ')']);
                 return;
             }
 
@@ -387,12 +491,84 @@ class FulfillmentController
                 'payment_status' => $mappedStatus,
                 'recommendation_status' => $recommendationStatus,
                 'midtrans_status' => $midtransStatus,
+                'redirect_url' => url('?page=order-payment-detail&id=' . $fulfillmentId),
             ]);
         } catch (Throwable $e) {
             error_log($e->getMessage());
             http_response_code(500);
             echo json_encode(['error' => 'Terjadi kesalahan saat sinkronisasi status pembayaran']);
         }
+    }
+
+    public function orderPaymentDetail(): void
+    {
+        require_role(['pasien', 'super_admin', 'admin']);
+
+        $id = (int) ($_GET['id'] ?? 0);
+        $order = $this->fulfillments->findDetailed($id);
+        if (!$order) {
+            http_response_code(404);
+            include __DIR__ . '/../Views/errors/404.php';
+            return;
+        }
+
+        $user = user();
+        $isPatient = ($user['role'] ?? '') === 'pasien';
+        if ($isPatient) {
+            $residentIds = $this->residentIdsForUser((int) $user['id']);
+            if ($residentIds && !in_array((int) $order['resident_id'], $residentIds, true)) {
+                http_response_code(403);
+                include __DIR__ . '/../Views/errors/403.php';
+                return;
+            }
+        }
+
+        $recommendation = (new Recommendation())->findWithItems((int) $order['recommendation_id']);
+        if (!$recommendation) {
+            http_response_code(404);
+            include __DIR__ . '/../Views/errors/404.php';
+            return;
+        }
+
+        include __DIR__ . '/../Views/orders/order_payment_detail.php';
+    }
+
+    private function generateUniqueMidtransId(int $recommendationId): string
+    {
+        do {
+            $candidate = 'POSYANDU-MED-' . $recommendationId . '-' . time() . '-' . bin2hex(random_bytes(3));
+            $exists = $this->fulfillments->findByMidtransOrderId($candidate);
+        } while ($exists);
+
+        return $candidate;
+    }
+
+    private function loadSnapCache(): array
+    {
+        $path = sys_get_temp_dir() . '/midtrans_snap_cache.json';
+        if (!file_exists($path)) {
+            return [];
+        }
+
+        $content = file_get_contents($path);
+        if (!$content) {
+            return [];
+        }
+
+        $decoded = json_decode($content, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    private function saveSnapCache(array $cache): void
+    {
+        $path = sys_get_temp_dir() . '/midtrans_snap_cache.json';
+        file_put_contents($path, json_encode($cache));
+    }
+
+    private function logMidtransError(string $label, array $context = []): void
+    {
+        $line = date('c') . ' [' . $label . '] ' . json_encode($context) . PHP_EOL;
+        file_put_contents('/tmp/midtrans.log', $line, FILE_APPEND);
     }
 
     private function buildSnapItems(array $recommendation): array
