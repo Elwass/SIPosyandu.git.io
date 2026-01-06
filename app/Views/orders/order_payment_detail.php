@@ -180,10 +180,12 @@ const detailUrl = '<?= url('?page=order-payment-detail&id=' . $order['id']) ?>';
 async function parseJsonResponse(response) {
     const text = await response.text();
     try {
-        return JSON.parse(text);
+        const data = JSON.parse(text);
+        return { response, data };
     } catch (error) {
-        console.error('Respon bukan JSON:', text);
-        throw new Error('Respon pembayaran tidak valid');
+        console.error(text);
+        alert('Gagal membaca respon server. Periksa endpoint pembayaran (mungkin mengembalikan HTML error).');
+        return null;
     }
 }
 
@@ -198,21 +200,36 @@ async function createPaymentToken() {
     try {
         const res = await fetch('<?= url('?action=payment-create') ?>', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fulfillment_order_id: fulfillmentOrderId })
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'fulfillment_order_id=' + encodeURIComponent(fulfillmentOrderId)
         });
-        const data = await parseJsonResponse(res);
-        if (!res.ok || data.success === false) {
-            throw new Error(data.message || 'Gagal membuat pembayaran');
+        const parsed = await parseJsonResponse(res);
+        if (!parsed) {
+            payButton.disabled = false;
+            payButton.textContent = 'Bayar Sekarang';
+            return;
+        }
+
+        const { data } = parsed;
+        if (!parsed.response.ok || !data.success) {
+            alert(data.message || 'Gagal membuat pembayaran');
+            payButton.disabled = false;
+            payButton.textContent = 'Bayar Sekarang';
+            return;
         }
 
         if (!data.token) {
-            window.location = detailUrl;
+            alert(data.message || 'Token pembayaran tidak tersedia');
+            payButton.disabled = false;
+            payButton.textContent = 'Bayar Sekarang';
             return;
         }
 
         if (typeof window.snap === 'undefined') {
-            throw new Error('Snap.js belum termuat.');
+            alert('Snap.js belum termuat.');
+            payButton.disabled = false;
+            payButton.textContent = 'Bayar Sekarang';
+            return;
         }
 
         const redirectToDetail = () => window.location = detailUrl;
@@ -235,8 +252,13 @@ async function createPaymentToken() {
 async function syncStatusAndRedirect() {
     try {
         const res = await fetch('<?= url('?action=payment-status') ?>' + '&fulfillment_order_id=' + fulfillmentOrderId);
-        const data = await parseJsonResponse(res);
-        if (!res.ok || data.success === false) {
+        const parsed = await parseJsonResponse(res);
+        if (!parsed) {
+            return;
+        }
+
+        const { data } = parsed;
+        if (!parsed.response.ok || !data.success) {
             throw new Error(data.message || 'Gagal cek status');
         }
         paymentStatusEl.textContent = data.payment_status;
