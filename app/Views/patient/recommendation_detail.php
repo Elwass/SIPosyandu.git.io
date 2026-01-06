@@ -1,5 +1,7 @@
 <?php include __DIR__ . '/../layouts/header.php'; ?>
 <?php
+$user = user();
+$isPatient = ($user['role'] ?? '') === 'pasien';
 $appConfig = app_config();
 $clientKey = $appConfig['midtrans']['client_key'] ?? '';
 $isProduction = (bool) ($appConfig['midtrans']['is_production'] ?? false);
@@ -106,7 +108,7 @@ $currentFulfillmentMethod = $latestOrder['fulfillment_method'] ?? null;
                 </div>
             </div>
             <div class="col-lg-4">
-                <div class="surface-card mb-3">
+                <div class="surface-card mb-3" id="fulfillment-card">
                     <div class="surface-header">
                         <h5 class="mb-0">Proses Rekomendasi</h5>
                     </div>
@@ -129,7 +131,7 @@ $currentFulfillmentMethod = $latestOrder['fulfillment_method'] ?? null;
                         </form>
                     </div>
                 </div>
-                <div class="surface-card">
+                <div class="surface-card" id="payment-section">
                     <div class="surface-header">
                         <h5 class="mb-0">Pembayaran</h5>
                     </div>
@@ -140,9 +142,21 @@ $currentFulfillmentMethod = $latestOrder['fulfillment_method'] ?? null;
                         <p class="mb-2">Total: <strong id="payment-total">Rp<?= number_format($subtotal, 0, ',', '.') ?></strong></p>
                         <div class="d-grid gap-2">
                             <button class="btn btn-success" id="pay-button" type="button">Bayar Sekarang</button>
-                            <button class="btn btn-outline-secondary" id="refresh-button" type="button" <?= $currentFulfillmentId ? '' : 'disabled' ?>>Refresh Status</button>
+                            <button class="btn btn-outline-secondary" id="refresh-button" type="button" <?= $currentFulfillmentId ? '' : 'disabled' ?>>Perbarui Status</button>
+                            <?php if ($currentFulfillmentId): ?>
+                                <a class="btn btn-outline-primary" href="<?= url('?page=order-payment-detail&id=' . $currentFulfillmentId) ?>">Lihat Detail Pesanan</a>
+                            <?php endif; ?>
                         </div>
                         <small class="text-muted d-block mt-2">Pembayaran online berlaku untuk Pickup & Delivery.</small>
+                    </div>
+                </div>
+                <div class="surface-card d-none" id="self-buy-section">
+                    <div class="surface-header">
+                        <h5 class="mb-0">Pembelian Mandiri</h5>
+                    </div>
+                    <div class="surface-body">
+                        <p class="mb-2">Metode <strong>Self Buy</strong> dipilih. Silakan beli obat secara mandiri sesuai rekomendasi.</p>
+                        <p class="text-muted mb-0 small">Simpan bukti pembelian dan ikuti aturan pakai yang tercantum pada resep.</p>
                     </div>
                 </div>
             </div>
@@ -150,49 +164,70 @@ $currentFulfillmentMethod = $latestOrder['fulfillment_method'] ?? null;
         <?php endif; ?>
     </div>
 </section>
-<?php if ($clientKey): ?>
+<?php if ($isPatient && $clientKey): ?>
 <script src="<?= $snapUrl ?>" data-client-key="<?= htmlspecialchars($clientKey) ?>"></script>
 <?php endif; ?>
+<?php if ($isPatient): ?>
 <script>
 const form = document.getElementById('fulfillment-form');
 const payButton = document.getElementById('pay-button');
+const processButton = document.getElementById('process-button');
 const refreshButton = document.getElementById('refresh-button');
 const fulfillmentMethod = document.getElementById('fulfillment_method');
 const deliveryAddress = document.getElementById('delivery-address');
+const paymentSection = document.getElementById('payment-section');
+const selfBuySection = document.getElementById('self-buy-section');
 const recommendationStatusEl = document.getElementById('recommendation-status');
 let currentOrderId = <?= $currentFulfillmentId ? (int) $currentFulfillmentId : 'null' ?>;
 let paymentStatusEl = document.getElementById('payment-status');
 let hasClientKey = Boolean("<?= $clientKey ?>");
+const detailBaseUrl = '<?= url('?page=order-payment-detail&id=') ?>';
 
-fulfillmentMethod.addEventListener('change', () => {
-    if (fulfillmentMethod.value === 'DELIVERY') {
+function toggleFulfillmentUi() {
+    const method = fulfillmentMethod.value;
+    const requiresGateway = method !== 'SELF_BUY';
+    const buttonLabel = requiresGateway ? 'Bayar Sekarang' : 'Buat Pesanan';
+    processButton.textContent = buttonLabel;
+    payButton.textContent = buttonLabel;
+
+    if (method === 'DELIVERY') {
         deliveryAddress.classList.remove('d-none');
     } else {
         deliveryAddress.classList.add('d-none');
     }
 
-    if (!hasClientKey && fulfillmentMethod.value !== 'SELF_BUY') {
+    if (method === 'SELF_BUY') {
+        paymentSection.classList.add('d-none');
+        selfBuySection.classList.remove('d-none');
+    } else {
+        paymentSection.classList.remove('d-none');
+        selfBuySection.classList.add('d-none');
+    }
+
+    if (!hasClientKey && requiresGateway) {
         payButton.disabled = true;
-    } else if (!payButton.disabled) {
+    } else {
         payButton.disabled = false;
     }
-});
+}
 
 function setPayButtonLoading(isLoading) {
     const requiresGateway = fulfillmentMethod.value !== 'SELF_BUY';
-    payButton.disabled = isLoading || (requiresGateway && !hasClientKey);
-    payButton.textContent = isLoading ? 'Memproses...' : 'Bayar Sekarang';
+    const alreadyPaid = paymentStatusEl.textContent.toUpperCase() === 'PAID';
+    payButton.disabled = isLoading || alreadyPaid || (requiresGateway && !hasClientKey);
+    payButton.textContent = isLoading ? 'Memproses...' : (requiresGateway ? 'Bayar Sekarang' : 'Buat Pesanan');
 }
 
 async function createPaymentAndPay(eventSource = 'button') {
-    if (!hasClientKey && fulfillmentMethod.value !== 'SELF_BUY') {
+    const method = fulfillmentMethod.value;
+    if (!hasClientKey && method !== 'SELF_BUY') {
         alert('Client key Midtrans belum dikonfigurasi.');
         return;
     }
 
     const payload = {
         recommendation_id: form.recommendation_id.value,
-        fulfillment_method: fulfillmentMethod.value,
+        fulfillment_method: method,
         address: form.address ? form.address.value : ''
     };
 
@@ -213,7 +248,7 @@ async function createPaymentAndPay(eventSource = 'button') {
         refreshButton.disabled = !currentOrderId;
 
         if (!data.token) {
-            alert('Pesanan tercatat. Silakan proses pembelian mandiri.');
+            window.location = detailBaseUrl + currentOrderId;
             return;
         }
 
@@ -223,7 +258,7 @@ async function createPaymentAndPay(eventSource = 'button') {
         }
 
         window.snap.pay(data.token, {
-            onSuccess: function () { syncStatus(); },
+            onSuccess: function () { syncStatus(true); },
             onPending: function () { paymentStatusEl.textContent = 'PENDING'; },
             onError: function () { alert('Pembayaran gagal. Coba lagi.'); },
             onClose: function () { setPayButtonLoading(false); }
@@ -257,7 +292,11 @@ async function syncStatus(showAlert = false) {
         if (data.recommendation_status) {
             recommendationStatusEl.textContent = data.recommendation_status;
         }
-        if (showAlert) {
+        if (data.redirect_url) {
+            window.location = data.redirect_url;
+            return;
+        }
+        if (showAlert && !data.redirect_url) {
             alert('Status diperbarui: ' + data.payment_status);
         }
     } catch (error) {
@@ -278,15 +317,20 @@ refreshButton.addEventListener('click', () => {
     syncStatus(true);
 });
 
-if (!hasClientKey) {
-    const requiresGateway = fulfillmentMethod.value !== 'SELF_BUY';
-    if (requiresGateway) {
-        payButton.disabled = true;
-    }
+if (!hasClientKey && fulfillmentMethod.value !== 'SELF_BUY') {
+    payButton.disabled = true;
 }
+
+if (paymentStatusEl.textContent.toUpperCase() === 'PAID') {
+    payButton.disabled = true;
+    processButton.disabled = true;
+}
+
+toggleFulfillmentUi();
 
 <?php if ($currentFulfillmentId): ?>
 refreshButton.disabled = false;
 <?php endif; ?>
 </script>
+<?php endif; ?>
 <?php include __DIR__ . '/../layouts/footer.php'; ?>
