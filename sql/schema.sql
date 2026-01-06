@@ -6,6 +6,10 @@ USE si_posyandu;
 SET FOREIGN_KEY_CHECKS=0;
 
 -- ensure a clean slate when re-running the schema script
+DROP TABLE IF EXISTS fulfillment_orders;
+DROP TABLE IF EXISTS recommendation_items;
+DROP TABLE IF EXISTS recommendations;
+DROP TABLE IF EXISTS medicines;
 DROP TABLE IF EXISTS payments;
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
@@ -121,6 +125,17 @@ CREATE TABLE products (
     updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE medicines (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    unit VARCHAR(50) NOT NULL,
+    price INT NOT NULL DEFAULT 0,
+    stock INT NULL,
+    image VARCHAR(255) NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -160,6 +175,43 @@ CREATE TABLE payments (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_payments_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE recommendations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    resident_id INT NOT NULL,
+    admin_id INT NOT NULL,
+    notes TEXT NULL,
+    status ENUM('SENT','CONFIRMED','FULFILLED','CANCELLED') NOT NULL DEFAULT 'SENT',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_rec_resident FOREIGN KEY (resident_id) REFERENCES residents(id) ON DELETE CASCADE,
+    CONSTRAINT fk_rec_admin FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE recommendation_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    recommendation_id INT NOT NULL,
+    medicine_id INT NOT NULL,
+    qty INT NOT NULL,
+    dosage VARCHAR(255) NOT NULL,
+    note VARCHAR(255) NULL,
+    CONSTRAINT fk_rec_item_header FOREIGN KEY (recommendation_id) REFERENCES recommendations(id) ON DELETE CASCADE,
+    CONSTRAINT fk_rec_item_medicine FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE fulfillment_orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    recommendation_id INT NOT NULL,
+    resident_id INT NOT NULL,
+    fulfillment_method ENUM('PICKUP','DELIVERY','SELF_BUY') NOT NULL,
+    address TEXT NULL,
+    delivery_fee INT NOT NULL DEFAULT 0,
+    total_amount INT NOT NULL DEFAULT 0,
+    payment_status ENUM('UNPAID','PENDING','PAID','FAILED') NOT NULL DEFAULT 'UNPAID',
+    midtrans_order_id VARCHAR(190) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_fulfillment_rec FOREIGN KEY (recommendation_id) REFERENCES recommendations(id) ON DELETE CASCADE,
+    CONSTRAINT fk_fulfillment_resident FOREIGN KEY (resident_id) REFERENCES residents(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO users (name, email, password, role) VALUES
