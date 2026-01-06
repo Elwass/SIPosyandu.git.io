@@ -28,6 +28,11 @@ class RecommendationController
         $latestOrder = null;
         $user = user();
 
+        $appConfig = app_config();
+        $clientKey = $appConfig['midtrans']['client_key'] ?? '';
+        $isProduction = (bool) ($appConfig['midtrans']['is_production'] ?? false);
+        $snapUrl = $isProduction ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js';
+
         if ($recommendation) {
             if ($user['role'] === 'pasien') {
                 $residentIds = $this->residentIdsForUser((int) $user['id']);

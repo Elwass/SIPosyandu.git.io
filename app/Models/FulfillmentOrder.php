@@ -4,7 +4,7 @@ class FulfillmentOrder extends BaseModel
 {
     public function create(array $data): int
     {
-        $stmt = $this->db->prepare('INSERT INTO fulfillment_orders (recommendation_id, resident_id, fulfillment_method, address, delivery_fee, total_amount, payment_status, midtrans_order_id) VALUES (:recommendation_id, :resident_id, :fulfillment_method, :address, :delivery_fee, :total_amount, :payment_status, :midtrans_order_id)');
+        $stmt = $this->db->prepare('INSERT INTO fulfillment_orders (recommendation_id, resident_id, fulfillment_method, address, delivery_fee, total_amount, payment_status, midtrans_order_id, snap_token) VALUES (:recommendation_id, :resident_id, :fulfillment_method, :address, :delivery_fee, :total_amount, :payment_status, :midtrans_order_id, :snap_token)');
         $stmt->execute([
             'recommendation_id' => $data['recommendation_id'],
             'resident_id' => $data['resident_id'],
@@ -14,6 +14,7 @@ class FulfillmentOrder extends BaseModel
             'total_amount' => $data['total_amount'],
             'payment_status' => $data['payment_status'] ?? 'UNPAID',
             'midtrans_order_id' => $data['midtrans_order_id'] ?? null,
+            'snap_token' => $data['snap_token'] ?? null,
         ]);
 
         return (int) $this->db->lastInsertId();
@@ -53,6 +54,16 @@ class FulfillmentOrder extends BaseModel
     {
         $stmt = $this->db->prepare('UPDATE fulfillment_orders SET midtrans_order_id = :midtrans_order_id WHERE id = :id');
         $stmt->execute(['midtrans_order_id' => $midtransOrderId, 'id' => $id]);
+    }
+
+    public function updatePaymentData(int $id, ?string $midtransOrderId, ?string $snapToken): void
+    {
+        $stmt = $this->db->prepare('UPDATE fulfillment_orders SET midtrans_order_id = :midtrans_order_id, snap_token = :snap_token WHERE id = :id');
+        $stmt->execute([
+            'midtrans_order_id' => $midtransOrderId,
+            'snap_token' => $snapToken,
+            'id' => $id,
+        ]);
     }
 
     public function listByResident(int $residentId): array

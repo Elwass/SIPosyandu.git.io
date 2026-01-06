@@ -16,8 +16,10 @@ return [
         'timezone' => getenv('APP_TIMEZONE') ?: 'Asia/Jakarta'
     ],
     'midtrans' => [
-        'server_key' => getenv('MIDTRANS_SERVER_KEY') ?: '',
-        'client_key' => getenv('MIDTRANS_CLIENT_KEY') ?: '',
+        // Isi dengan kredensial Midtrans Anda. Nilai placeholder ini harus diganti di lingkungan produksi.
+        'server_key' => getenv('MIDTRANS_SERVER_KEY') ?: '__MIDTRANS_SERVER_KEY__',
+        'client_key' => getenv('MIDTRANS_CLIENT_KEY') ?: '__MIDTRANS_CLIENT_KEY__',
+        'merchant_id' => getenv('MIDTRANS_MERCHANT_ID') ?: '__MIDTRANS_MERCHANT_ID__',
         'is_production' => getenv('MIDTRANS_IS_PRODUCTION') === 'true'
     ]
 ];

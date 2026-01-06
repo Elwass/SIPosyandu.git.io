@@ -174,24 +174,24 @@ const paymentStatusEl = document.getElementById('payment-status');
 const payButton = document.getElementById('pay-button');
 const refreshButton = document.getElementById('refresh-button');
 const fulfillmentOrderId = <?= (int) $order['id'] ?>;
-const recommendationId = <?= (int) $order['recommendation_id'] ?>;
-const fulfillmentMethod = "<?= $order['fulfillment_method'] ?>";
 const hasClientKey = <?= $hasClientKey ? 'true' : 'false' ?>;
+const detailUrl = '<?= url('?page=order-payment-detail&id=' . $order['id']) ?>';
+
+async function parseJsonResponse(response) {
+    const text = await response.text();
+    try {
+        return JSON.parse(text);
+    } catch (error) {
+        console.error('Respon bukan JSON:', text);
+        throw new Error('Respon pembayaran tidak valid');
+    }
+}
 
 async function createPaymentToken() {
-    if (!hasClientKey && fulfillmentMethod !== 'SELF_BUY') {
+    if (!hasClientKey && "<?= $order['fulfillment_method'] ?>" !== 'SELF_BUY') {
         alert('Client key Midtrans belum dikonfigurasi.');
         return;
     }
-
-    const payload = {
-        recommendation_id: recommendationId,
-        fulfillment_method: fulfillmentMethod,
-        fulfillment_order_id: fulfillmentOrderId,
-        address: <?= json_encode($order['address'] ?? '') ?>,
-        delivery_fee: <?= (int) $order['delivery_fee'] ?>,
-        request_snap: true
-    };
 
     payButton.disabled = true;
     payButton.textContent = 'Memproses...';
@@ -199,28 +199,31 @@ async function createPaymentToken() {
         const res = await fetch('<?= url('?action=payment-create') ?>', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({ fulfillment_order_id: fulfillmentOrderId })
         });
-        const data = await res.json();
-        if (!res.ok) {
-            throw new Error(data.error || 'Gagal membuat pembayaran');
+        const data = await parseJsonResponse(res);
+        if (!res.ok || data.success === false) {
+            throw new Error(data.message || 'Gagal membuat pembayaran');
         }
 
         if (!data.token) {
-            window.location = '<?= url('?page=order-payment-detail&id=' . $order['id']) ?>';
+            window.location = detailUrl;
             return;
         }
 
         if (typeof window.snap === 'undefined') {
-            alert('Snap.js belum termuat.');
-            return;
+            throw new Error('Snap.js belum termuat.');
         }
 
+        const redirectToDetail = () => window.location = detailUrl;
         window.snap.pay(data.token, {
-            onSuccess: function () { syncStatusAndRedirect(); },
-            onPending: function () { paymentStatusEl.textContent = 'PENDING'; },
-            onError: function () { alert('Pembayaran gagal.'); },
-            onClose: function () { payButton.disabled = false; payButton.textContent = 'Bayar Sekarang'; }
+            onSuccess: redirectToDetail,
+            onPending: redirectToDetail,
+            onError: redirectToDetail,
+            onClose: () => {
+                payButton.disabled = false;
+                payButton.textContent = 'Bayar Sekarang';
+            }
         });
     } catch (error) {
         alert(error.message);
@@ -231,20 +234,13 @@ async function createPaymentToken() {
 
 async function syncStatusAndRedirect() {
     try {
-        const res = await fetch('<?= url('?action=payment-sync-status') ?>', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fulfillment_order_id: fulfillmentOrderId })
-        });
-        const data = await res.json();
-        if (!res.ok) {
-            throw new Error(data.error || 'Gagal cek status');
+        const res = await fetch('<?= url('?action=payment-status') ?>' + '&fulfillment_order_id=' + fulfillmentOrderId);
+        const data = await parseJsonResponse(res);
+        if (!res.ok || data.success === false) {
+            throw new Error(data.message || 'Gagal cek status');
         }
         paymentStatusEl.textContent = data.payment_status;
-        if (data.payment_status === 'PAID') {
-            paymentStatusEl.classList.remove('bg-soft-secondary', 'text-secondary');
-            paymentStatusEl.classList.add('bg-soft-success', 'text-success');
-        }
+        window.location = detailUrl;
     } catch (error) {
         alert(error.message);
     }

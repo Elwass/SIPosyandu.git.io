@@ -48,6 +48,11 @@ if ($action) {
                 $fulfillmentController->paymentCreate();
             }
             break;
+        case 'payment-status':
+            if ($method === 'GET') {
+                $fulfillmentController->paymentStatus();
+            }
+            break;
         case 'payment-sync-status':
             if ($method === 'POST') {
                 $fulfillmentController->syncStatus();

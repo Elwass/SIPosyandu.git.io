@@ -303,8 +303,9 @@ CREATE TABLE IF NOT EXISTS fulfillment_orders (
     address TEXT NULL,
     delivery_fee INT NOT NULL DEFAULT 0,
     total_amount INT NOT NULL DEFAULT 0,
-    payment_status ENUM('UNPAID','PENDING','PAID','FAILED') NOT NULL DEFAULT 'UNPAID',
+    payment_status ENUM('UNPAID','PENDING','PAID','FAILED','EXPIRED') NOT NULL DEFAULT 'UNPAID',
     midtrans_order_id VARCHAR(190) NULL,
+    snap_token VARCHAR(255) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_fulfillment_rec FOREIGN KEY (recommendation_id) REFERENCES recommendations(id) ON DELETE CASCADE,
     CONSTRAINT fk_fulfillment_resident FOREIGN KEY (resident_id) REFERENCES residents(id) ON DELETE CASCADE
