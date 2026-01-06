@@ -30,13 +30,6 @@ $pageToLabel = [
     <div class="admin-layout" data-sidebar>
         <aside class="sidebar" id="adminSidebar">
             <div class="sidebar__top">
-                <button class="sidebar__toggle" type="button" data-sidebar-toggle aria-label="Toggle sidebar">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="3" y1="6" x2="21" y2="6"></line>
-                        <line x1="3" y1="12" x2="21" y2="12"></line>
-                        <line x1="3" y1="18" x2="21" y2="18"></line>
-                    </svg>
-                </button>
                 <a class="sidebar__brand" href="<?= url('?page=dashboard') ?>">
                     <span class="brand__mark">SI</span>
                     <div class="brand__text">
@@ -134,16 +127,19 @@ $pageToLabel = [
         <div class="admin-main">
             <div class="admin-topbar">
                 <div class="admin-topbar__left">
-                    <button class="sidebar__toggle" type="button" data-sidebar-toggle aria-label="Toggle sidebar">
+                    <button id="sidebarToggle" class="sidebar__toggle icon-btn" type="button" data-sidebar-toggle aria-label="Toggle sidebar">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="3" y1="6" x2="21" y2="6"></line>
                             <line x1="3" y1="12" x2="21" y2="12"></line>
                             <line x1="3" y1="18" x2="21" y2="18"></line>
                         </svg>
                     </button>
-                    <div class="admin-topbar__meta">
-                        <span class="app-title">SI Posyandu</span>
-                        <span class="app-subtitle">Panel Admin</span>
+                    <div class="topbar-brand" aria-label="Brand">
+                        <div class="topbar-brand__logo">SI</div>
+                        <div class="topbar-brand__text">
+                            <div class="brand-title">SI Posyandu</div>
+                            <div class="brand-subtitle">Panel Admin</div>
+                        </div>
                     </div>
                 </div>
                 <div class="admin-topbar__right">
@@ -286,12 +282,12 @@ $pageToLabel = [
     }
 
     .sidebar__toggle {
-        background: transparent;
+        background: #ffffff;
         border: 1px solid var(--sidebar-border);
         color: var(--sidebar-text);
-        width: 42px;
-        height: 42px;
-        border-radius: 10px;
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -466,39 +462,80 @@ $pageToLabel = [
     }
 
     .admin-topbar {
-        height: 68px;
+        height: 64px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 1.25rem;
+        gap: 12px;
+        padding: 0 16px;
         background: #ffffff;
         border-bottom: 1px solid #e5e7eb;
         position: sticky;
         top: 0;
-        z-index: 10;
+        z-index: 50;
     }
 
     .admin-topbar__left {
         display: inline-flex;
         align-items: center;
-        gap: 0.75rem;
+        gap: 12px;
+        min-width: 0;
     }
 
-    .admin-topbar__meta {
+    .icon-btn {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .icon-btn:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+
+    .topbar-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+    }
+
+    .topbar-brand__logo {
+        width: 36px;
+        height: 36px;
+        border-radius: 999px;
+        background: #1f3a8a;
+        color: #ffffff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    .topbar-brand__text {
         display: flex;
         flex-direction: column;
         line-height: 1.2;
+        min-width: 0;
     }
 
-    .app-title {
+    .brand-title {
+        font-size: 16px;
         font-weight: 700;
         color: #0f172a;
-        font-size: 16px;
     }
 
-    .app-subtitle {
+    .brand-subtitle {
         font-size: 12px;
-        color: #64748b;
+        color: #6b7280;
     }
 
     .admin-topbar__right {
