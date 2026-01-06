@@ -530,6 +530,11 @@ class FulfillmentController
             return;
         }
 
+        $appConfig = app_config();
+        $clientKey = $appConfig['midtrans']['client_key'] ?? '';
+        $isProduction = (bool) ($appConfig['midtrans']['is_production'] ?? false);
+        $snapUrl = $isProduction ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js';
+
         include __DIR__ . '/../Views/orders/order_payment_detail.php';
     }
 

@@ -2,10 +2,9 @@
 <?php
 $user = user();
 $isPatient = ($user['role'] ?? '') === 'pasien';
-$appConfig = app_config();
-$clientKey = $appConfig['midtrans']['client_key'] ?? '';
-$isProduction = (bool) ($appConfig['midtrans']['is_production'] ?? false);
-$snapUrl = $isProduction ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js';
+$clientKey = $clientKey ?? '';
+$snapUrl = $snapUrl ?? 'https://app.sandbox.midtrans.com/snap/snap.js';
+$hasClientKey = isset($clientKey) && $clientKey !== '';
 $showPayButton = $isPatient && $order['fulfillment_method'] !== 'SELF_BUY' && strtoupper((string) $order['payment_status']) !== 'PAID';
 ?>
 <section class="section">
@@ -112,36 +111,50 @@ $showPayButton = $isPatient && $order['fulfillment_method'] !== 'SELF_BUY' && st
             <div class="col-lg-4">
                 <div class="surface-card">
                     <div class="surface-header">
-                        <h5 class="mb-0">Pemenuhan</h5>
+                        <h5 class="mb-0">Pemenuhan & Pembayaran</h5>
                     </div>
                     <div class="surface-body">
-                        <p class="mb-1 text-muted">Metode</p>
-                        <p class="fw-semibold"><?= htmlspecialchars($order['fulfillment_method']) ?></p>
+                        <div class="mb-3">
+                            <p class="mb-1 text-muted">Metode</p>
+                            <p class="fw-semibold mb-0"><?= htmlspecialchars($order['fulfillment_method']) ?></p>
+                        </div>
                         <?php if ($order['fulfillment_method'] === 'DELIVERY'): ?>
-                            <p class="mb-1 text-muted">Alamat Pengantaran</p>
-                            <p class="fw-semibold"><?= nl2br(htmlspecialchars($order['address'] ?? '-')) ?></p>
+                            <div class="mb-3">
+                                <p class="mb-1 text-muted">Alamat Pengantaran</p>
+                                <p class="fw-semibold mb-0"><?= nl2br(htmlspecialchars($order['address'] ?? '-')) ?></p>
+                            </div>
                         <?php endif; ?>
-                        <p class="mb-1 text-muted">Dibuat</p>
-                        <p class="fw-semibold"><?= htmlspecialchars($order['created_at'] ?? '-') ?></p>
+                        <div class="mb-3">
+                            <p class="mb-1 text-muted">Total Pembayaran</p>
+                            <h5 class="mb-0">Rp<?= number_format($order['total_amount'], 0, ',', '.') ?></h5>
+                        </div>
+                        <div class="mb-3">
+                            <p class="mb-1 text-muted">Dibuat</p>
+                            <p class="fw-semibold mb-0"><?= htmlspecialchars($order['created_at'] ?? '-') ?></p>
+                        </div>
                         <?php if (!empty($order['midtrans_order_id'])): ?>
-                            <p class="mb-1 text-muted">Midtrans Order</p>
-                            <p class="fw-semibold"><?= htmlspecialchars($order['midtrans_order_id']) ?></p>
+                            <div class="mb-3">
+                                <p class="mb-1 text-muted">Midtrans Order</p>
+                                <p class="fw-semibold mb-0"><?= htmlspecialchars($order['midtrans_order_id']) ?></p>
+                            </div>
                         <?php endif; ?>
                         <?php if ($isPatient && $order['fulfillment_method'] === 'SELF_BUY'): ?>
                             <div class="alert alert-secondary mt-3 mb-0">Tidak ada pembayaran online. Silakan lakukan pembelian mandiri.</div>
                         <?php endif; ?>
-                        <?php if ($showPayButton): ?>
-                            <?php if (!$clientKey): ?>
-                                <div class="alert alert-danger">Client Key Midtrans belum dikonfigurasi.</div>
+                        <?php if ($isPatient): ?>
+                            <div class="d-grid gap-2 mt-3">
+                                <?php if ($showPayButton): ?>
+                                    <?php if (!$hasClientKey): ?>
+                                        <div class="alert alert-danger">Client Key Midtrans belum dikonfigurasi.</div>
+                                    <?php endif; ?>
+                                    <button class="btn btn-success" id="pay-button" type="button" <?= $hasClientKey ? '' : 'disabled' ?>>Bayar Sekarang</button>
+                                <?php endif; ?>
+                                <button class="btn btn-outline-secondary" id="refresh-button" type="button">Perbarui Status</button>
+                                <a class="btn btn-outline-primary" href="<?= url('?page=order-payment-detail&id=' . $order['id']) ?>">Lihat Detail Pesanan</a>
+                            </div>
+                            <?php if ($showPayButton && !$hasClientKey): ?>
+                                <small class="text-muted d-block mt-2">Aktifkan client key Midtrans untuk melanjutkan pembayaran.</small>
                             <?php endif; ?>
-                            <div class="d-grid gap-2 mt-3">
-                                <button class="btn btn-success" id="pay-button" type="button" <?= $clientKey ? '' : 'disabled' ?>>Bayar Sekarang</button>
-                                <button class="btn btn-outline-secondary" id="refresh-button" type="button">Perbarui Status</button>
-                            </div>
-                        <?php elseif ($isPatient): ?>
-                            <div class="d-grid gap-2 mt-3">
-                                <button class="btn btn-outline-secondary" id="refresh-button" type="button">Perbarui Status</button>
-                            </div>
                         <?php endif; ?>
                         <?php if ($isPatient && strtoupper((string) $order['payment_status']) === 'PAID'): ?>
                             <div class="alert alert-success mt-3 mb-0">Pembayaran sudah diterima.</div>
@@ -152,7 +165,7 @@ $showPayButton = $isPatient && $order['fulfillment_method'] !== 'SELF_BUY' && st
         </div>
     </div>
 </section>
-<?php if ($showPayButton && $clientKey): ?>
+<?php if ($showPayButton && $hasClientKey): ?>
 <script src="<?= $snapUrl ?>" data-client-key="<?= htmlspecialchars($clientKey) ?>"></script>
 <?php endif; ?>
 <?php if ($isPatient): ?>
@@ -163,7 +176,7 @@ const refreshButton = document.getElementById('refresh-button');
 const fulfillmentOrderId = <?= (int) $order['id'] ?>;
 const recommendationId = <?= (int) $order['recommendation_id'] ?>;
 const fulfillmentMethod = "<?= $order['fulfillment_method'] ?>";
-const hasClientKey = Boolean("<?= $clientKey ?>");
+const hasClientKey = <?= $hasClientKey ? 'true' : 'false' ?>;
 
 async function createPaymentToken() {
     if (!hasClientKey && fulfillmentMethod !== 'SELF_BUY') {
@@ -228,8 +241,9 @@ async function syncStatusAndRedirect() {
             throw new Error(data.error || 'Gagal cek status');
         }
         paymentStatusEl.textContent = data.payment_status;
-        if (data.redirect_url) {
-            window.location = data.redirect_url;
+        if (data.payment_status === 'PAID') {
+            paymentStatusEl.classList.remove('bg-soft-secondary', 'text-secondary');
+            paymentStatusEl.classList.add('bg-soft-success', 'text-success');
         }
     } catch (error) {
         alert(error.message);

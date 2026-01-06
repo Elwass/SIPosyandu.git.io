@@ -143,6 +143,17 @@ $currentFulfillmentMethod = $latestOrder['fulfillment_method'] ?? null;
                                     <a class="btn btn-outline-primary" href="<?= url('?page=order-payment-detail&id=' . $currentFulfillmentId) ?>">Lihat Detail Pesanan</a>
                                 <?php endif; ?>
                             </div>
+                            <div class="mb-3">
+                                <p class="mb-1 text-muted">Total</p>
+                                <h5 class="mb-0">Rp<?= number_format($subtotal, 0, ',', '.') ?></h5>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-success" id="pay-button" type="submit">Bayar Sekarang</button>
+                                <button class="btn btn-outline-secondary" id="refresh-button" type="button" <?= $currentFulfillmentId ? '' : 'disabled' ?>>Perbarui Status</button>
+                                <?php if ($currentFulfillmentId): ?>
+                                    <a class="btn btn-outline-primary" href="<?= url('?page=order-payment-detail&id=' . $currentFulfillmentId) ?>">Lihat Detail Pesanan</a>
+                                <?php endif; ?>
+                            </div>
                             <small class="text-muted d-block mt-2">Pembayaran online hanya diproses di halaman detail pesanan.</small>
                         </form>
                         <div class="alert alert-info d-none mt-3 mb-0" id="self-buy-info">Metode <strong>Self Buy</strong> dipilih. Silakan beli obat secara mandiri sesuai rekomendasi.</div>
