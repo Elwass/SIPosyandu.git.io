@@ -4,7 +4,7 @@
         <div class="section-header">
             <span class="section-eyebrow">Profil Pasien</span>
             <h2 class="section-title">Data Pribadi & BPJS</h2>
-            <p class="section-subtitle">Perbarui informasi BPJS dan tambahkan balita yang Anda dampingi.</p>
+            <p class="section-subtitle">Perbarui informasi BPJS dan tambahkan data keluarga yang Anda dampingi.</p>
         </div>
 
         <?php if ($message = flash('success')): ?>
@@ -70,7 +70,7 @@
 
         <div class="surface-card mt-4" id="children">
             <div class="surface-header d-flex justify-content-between align-items-center">
-                <h3 class="mb-0">Balita Anda</h3>
+                <h3 class="mb-0">Keluarga Anda</h3>
                 <span class="badge rounded-pill bg-soft-primary text-primary"><?= count($children) ?> terdaftar</span>
             </div>
             <div class="surface-body">
@@ -80,6 +80,7 @@
                             <thead>
                                 <tr>
                                     <th>Nama</th>
+                                    <th>Kategori</th>
                                     <th>Tanggal Lahir</th>
                                     <th>NIK</th>
                                     <th>Status Gizi Terakhir</th>
@@ -90,6 +91,7 @@
                                     <?php $latest = $latestMeasurements[$child['id']] ?? null; ?>
                                     <tr>
                                         <td><?= htmlspecialchars($child['name']) ?></td>
+                                        <td><span class="badge bg-soft-primary text-primary text-capitalize"><?= htmlspecialchars(str_replace('_', ' ', $child['category'])) ?></span></td>
                                         <td><?= date('d M Y', strtotime($child['birth_date'])) ?></td>
                                         <td><?= htmlspecialchars($child['nik']) ?></td>
                                         <td>
@@ -111,49 +113,12 @@
         </div>
 
         <div class="surface-card mt-4">
-            <div class="surface-header">
-                <h3>Tambah Balita</h3>
-                <p class="text-muted mb-0">Isikan data balita yang ingin Anda hubungkan ke akun ini. Kategori otomatis diset sebagai "toddler".</p>
-            </div>
-            <div class="surface-body">
-                <form method="post" action="<?= url('?page=patient-child-store') ?>">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Nama Balita</label>
-                            <input type="text" name="name" class="form-control" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">NIK</label>
-                            <input type="text" name="nik" class="form-control" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">No. KK</label>
-                            <input type="text" name="family_number" class="form-control" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Nomor Telepon</label>
-                            <input type="text" name="phone" class="form-control" required>
-                        </div>
-                        <div class="col-md-8">
-                            <label class="form-label">Alamat</label>
-                            <input type="text" name="address" class="form-control" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Tanggal Lahir</label>
-                            <input type="date" name="birth_date" class="form-control" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Jenis Kelamin</label>
-                            <select name="gender" class="form-select" required>
-                                <option value="male">Laki-laki</option>
-                                <option value="female">Perempuan</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mt-3">
-                        <button type="submit" class="btn btn-primary">Simpan Balita</button>
-                    </div>
-                </form>
+            <div class="surface-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="mb-0">Tambah Data Keluarga</h3>
+                    <p class="text-muted mb-0">Isi data keluarga yang ingin Anda hubungkan ke akun ini.</p>
+                </div>
+                <a href="<?= url('?page=patient-family-create') ?>" class="btn btn-primary">Buka Form</a>
             </div>
         </div>
     </div>
