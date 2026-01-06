@@ -57,7 +57,7 @@ class Database
     {
         $requiredTables = [
             'users', 'residents', 'bpjs_profiles', 'patient_children', 'measurements', 'immunizations', 'reminders',
-            'products', 'orders', 'order_items', 'payments'
+            'products', 'orders', 'order_items', 'payments', 'bookings'
         ];
 
         $hasMissingTables = self::isMissingTables($pdo, $requiredTables);
@@ -181,6 +181,27 @@ CREATE TABLE IF NOT EXISTS products (
     description TEXT NULL,
     image_url VARCHAR(255) NULL,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE=utf8mb4_unicode_ci;
+SQL);
+
+        $pdo->exec(<<<SQL
+CREATE TABLE IF NOT EXISTS bookings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    booking_code VARCHAR(100) NOT NULL UNIQUE,
+    user_name VARCHAR(150) NOT NULL,
+    email VARCHAR(150) NOT NULL,
+    phone VARCHAR(50) NOT NULL,
+    service_name VARCHAR(150) NOT NULL,
+    package_name VARCHAR(150) NULL,
+    booking_date DATE NOT NULL,
+    booking_time TIME NOT NULL,
+    total_price DECIMAL(12,2) NOT NULL DEFAULT 0,
+    down_payment DECIMAL(12,2) NOT NULL DEFAULT 0,
+    order_id VARCHAR(150) NOT NULL,
+    snap_token VARCHAR(255) NULL,
+    payment_status ENUM('pending', 'paid', 'failed') NOT NULL DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE=utf8mb4_unicode_ci;

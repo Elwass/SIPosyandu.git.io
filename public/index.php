@@ -2,6 +2,7 @@
 require __DIR__ . '/../app/bootstrap.php';
 
 $page = $_GET['page'] ?? (is_logged_in() ? (user()['role'] === 'pasien' ? 'patient-dashboard' : 'dashboard') : 'landing');
+$action = $_GET['action'] ?? null;
 $method = $_SERVER['REQUEST_METHOD'];
 
 $authController = new AuthController();
@@ -10,6 +11,26 @@ $cartController = new CartController();
 $orderController = new OrderController();
 $midtransWebhook = new MidtransWebhookController();
 $checkoutController = new CheckoutController();
+$bookingController = new BookingController();
+
+if ($action) {
+    switch ($action) {
+        case 'booking-pay':
+            if ($method === 'POST') {
+                $bookingController->pay($_GET['code'] ?? '');
+            }
+            break;
+        case 'booking-check-status':
+            if ($method === 'POST') {
+                $bookingController->checkStatus($_GET['code'] ?? '');
+            }
+            break;
+        default:
+            http_response_code(404);
+            include __DIR__ . '/../app/Views/errors/404.php';
+    }
+    return;
+}
 
 switch ($page) {
     case 'landing':
@@ -83,6 +104,9 @@ switch ($page) {
         if ($method === 'POST') {
             $orderController->processCheckout();
         }
+        break;
+    case 'booking-detail':
+        $bookingController->show($_GET['code'] ?? '');
         break;
     case 'orders':
         $orderController->patientOrders();
