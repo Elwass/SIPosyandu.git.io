@@ -86,6 +86,14 @@ switch ($page) {
     case 'patient-bpjs-update':
         (new PatientController())->updateBpjs();
         break;
+    case 'patient-family-create':
+        (new PatientController())->createFamily();
+        break;
+    case 'patient-family-store':
+        if ($method === 'POST') {
+            (new PatientController())->storeFamily();
+        }
+        break;
     case 'patient-child-store':
         (new PatientController())->storeChild();
         break;
