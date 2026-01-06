@@ -23,6 +23,23 @@ Aplikasi informasi Posyandu berbasis PHP (tanpa framework) yang dapat dijalankan
 4. (Opsional) Setel variabel lingkungan `APP_BASE_URL` bila aplikasi tidak berjalan langsung dari direktori `public` (contoh: `http://localhost/si_posyandu/public`).
 5. Akses aplikasi melalui URL sesuai penempatan Anda.
 
+### Konfigurasi Midtrans
+
+Tambahkan variabel lingkungan berikut (contoh di file `.env` atau konfigurasi server) tanpa menyimpan kunci asli di repositori:
+
+```
+MIDTRANS_SERVER_KEY=your-server-key
+MIDTRANS_CLIENT_KEY=your-client-key
+MIDTRANS_IS_PRODUCTION=false
+```
+
+### Uji Webhook Midtrans
+
+1. Jalankan server lokal aplikasi (mis. `php -S localhost:8000 -t public`).
+2. Jalankan `ngrok http 8000` lalu catat URL publik HTTPS.
+3. Setel URL webhook di dashboard Midtrans ke `https://<ngrok-domain>/index.php?page=midtrans-webhook`.
+4. Lakukan transaksi Snap; Midtrans akan memanggil endpoint tersebut dan status pembayaran akan diperbarui otomatis.
+
 ### Akun Awal
 
 | Email | Password | Role |
