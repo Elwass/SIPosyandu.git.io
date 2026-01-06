@@ -300,6 +300,8 @@ class FulfillmentController
             Config::$isSanitized = true;
             Config::$is3ds = true;
 
+            $cache = $this->loadSnapCache();
+
             if ($method === 'DELIVERY' && $deliveryFee > 0) {
                 $items[] = [
                     'id' => 'DELIVERY',
@@ -309,7 +311,7 @@ class FulfillmentController
                 ];
             }
 
-            $midtransOrderId = $order['midtrans_order_id'] ?? ('POSYANDU-MED-' . $recommendationId . '-' . time());
+            $midtransOrderId = $order['midtrans_order_id'] ?? $this->generateUniqueMidtransId($recommendationId);
             $payloadSnap = [
                 'transaction_details' => [
                     'order_id' => $midtransOrderId,
@@ -322,6 +324,15 @@ class FulfillmentController
                     'phone' => $recommendation['phone'] ?? '',
                 ],
             ];
+
+            if (!empty($cache[$midtransOrderId]['token']) && (($cache[$midtransOrderId]['created_at'] ?? 0) > (time() - 86400))) {
+                echo json_encode([
+                    'token' => $cache[$midtransOrderId]['token'],
+                    'order_id' => $midtransOrderId,
+                    'fulfillment_order_id' => $order['id'] ?? $fulfillmentId,
+                ]);
+                return;
+            }
 
             if ($order) {
                 $this->fulfillments->updateMidtransOrder($fulfillmentId, $midtransOrderId);
@@ -341,19 +352,35 @@ class FulfillmentController
             }
 
             $snapResponse = Snap::getSnapToken($payloadSnap);
-            if (!$snapResponse || empty($snapResponse['token'])) {
+            $token = is_array($snapResponse) ? ($snapResponse['token'] ?? null) : $snapResponse;
+            if (!$token) {
+                $errorMessage = is_array($snapResponse) ? ($snapResponse['status_message'] ?? 'Gagal membuat pembayaran') : 'Gagal membuat pembayaran';
+                $this->logMidtransError('snap-token-failed', [
+                    'order_id' => $midtransOrderId,
+                    'payload' => $payloadSnap,
+                    'response' => $snapResponse,
+                ]);
                 http_response_code(500);
-                echo json_encode(['error' => 'Gagal membuat pembayaran']);
+                echo json_encode(['error' => $errorMessage]);
                 return;
             }
 
+            $cache[$midtransOrderId] = [
+                'token' => $token,
+                'created_at' => time(),
+                'fulfillment_order_id' => $fulfillmentOrderId,
+            ];
+            $this->saveSnapCache($cache);
+
             echo json_encode([
-                'token' => $snapResponse['token'],
+                'token' => $token,
                 'order_id' => $midtransOrderId,
                 'fulfillment_order_id' => $fulfillmentOrderId,
             ]);
         } catch (Throwable $e) {
-            error_log($e->getMessage());
+            $this->logMidtransError('payment-create-exception', [
+                'message' => $e->getMessage(),
+            ]);
             http_response_code(500);
             echo json_encode(['error' => 'Terjadi kesalahan saat membuat pembayaran']);
         }
@@ -417,8 +444,14 @@ class FulfillmentController
             curl_close($ch);
 
             if ($statusCode < 200 || $statusCode >= 300 || !$response) {
+                $this->logMidtransError('sync-status-failed', [
+                    'fulfillment_order_id' => $fulfillmentId,
+                    'order_id' => $order['midtrans_order_id'],
+                    'status_code' => $statusCode,
+                    'response' => $response,
+                ]);
                 http_response_code(500);
-                echo json_encode(['error' => 'Gagal memeriksa status pembayaran']);
+                echo json_encode(['error' => 'Gagal memeriksa status pembayaran (' . $statusCode . ')']);
                 return;
             }
 
@@ -477,6 +510,44 @@ class FulfillmentController
         }
 
         include __DIR__ . '/../Views/orders/order_payment_detail.php';
+    }
+
+    private function generateUniqueMidtransId(int $recommendationId): string
+    {
+        do {
+            $candidate = 'POSYANDU-MED-' . $recommendationId . '-' . time() . '-' . bin2hex(random_bytes(3));
+            $exists = $this->fulfillments->findByMidtransOrderId($candidate);
+        } while ($exists);
+
+        return $candidate;
+    }
+
+    private function loadSnapCache(): array
+    {
+        $path = sys_get_temp_dir() . '/midtrans_snap_cache.json';
+        if (!file_exists($path)) {
+            return [];
+        }
+
+        $content = file_get_contents($path);
+        if (!$content) {
+            return [];
+        }
+
+        $decoded = json_decode($content, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    private function saveSnapCache(array $cache): void
+    {
+        $path = sys_get_temp_dir() . '/midtrans_snap_cache.json';
+        file_put_contents($path, json_encode($cache));
+    }
+
+    private function logMidtransError(string $label, array $context = []): void
+    {
+        $line = date('c') . ' [' . $label . '] ' . json_encode($context) . PHP_EOL;
+        file_put_contents('/tmp/midtrans.log', $line, FILE_APPEND);
     }
 
     private function buildSnapItems(array $recommendation): array

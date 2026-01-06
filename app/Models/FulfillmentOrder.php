@@ -27,6 +27,14 @@ class FulfillmentOrder extends BaseModel
         return $order ?: null;
     }
 
+    public function findByMidtransOrderId(string $midtransOrderId): ?array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM fulfillment_orders WHERE midtrans_order_id = :midtrans_order_id LIMIT 1');
+        $stmt->execute(['midtrans_order_id' => $midtransOrderId]);
+        $order = $stmt->fetch();
+        return $order ?: null;
+    }
+
     public function findDetailed(int $id): ?array
     {
         $stmt = $this->db->prepare('SELECT fo.*, r.notes, r.status AS recommendation_status, res.name AS resident_name, res.nik, res.category, res.phone, res.address FROM fulfillment_orders fo JOIN recommendations r ON r.id = fo.recommendation_id JOIN residents res ON res.id = fo.resident_id WHERE fo.id = :id LIMIT 1');
