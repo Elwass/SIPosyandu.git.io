@@ -64,25 +64,52 @@ class PatientController
         redirect('?page=patient-profile');
     }
 
-    public function storeChild(): void
+    public function createFamily(): void
+    {
+        $patient = $this->currentPatient();
+        include __DIR__ . '/../Views/patient/family_form.php';
+    }
+
+    public function storeFamily(): void
     {
         $patient = $this->currentPatient();
 
+        $allowedCategories = ['pregnant', 'toddler', 'elderly'];
+        $category = $_POST['category'] ?? '';
+        if (!in_array($category, $allowedCategories, true)) {
+            flash('error', 'Kategori tidak valid.');
+            redirect('?page=patient-family-create');
+            return;
+        }
+
         $data = [
-            'name' => $_POST['name'],
-            'nik' => $_POST['nik'],
-            'family_number' => $_POST['family_number'],
-            'address' => $_POST['address'],
-            'phone' => $_POST['phone'],
-            'birth_date' => $_POST['birth_date'],
-            'gender' => $_POST['gender'],
-            'category' => 'toddler',
+            'name' => trim($_POST['name'] ?? ''),
+            'nik' => trim($_POST['nik'] ?? ''),
+            'family_number' => trim($_POST['family_number'] ?? ''),
+            'address' => trim($_POST['address'] ?? ''),
+            'phone' => trim($_POST['phone'] ?? ''),
+            'birth_date' => $_POST['birth_date'] ?? '',
+            'gender' => $_POST['gender'] ?? '',
+            'category' => $category,
         ];
+
+        if (in_array('', $data, true)) {
+            flash('error', 'Semua field wajib diisi.');
+            redirect('?page=patient-family-create');
+            return;
+        }
 
         $residentId = $this->residents->create($data);
         $this->patientChildren->attach($patient['id'], $residentId);
 
-        flash('success', 'Data balita berhasil ditambahkan ke akun Anda.');
-        redirect('?page=patient-profile');
+        flash('success', 'Data keluarga berhasil ditambahkan ke akun Anda.');
+        redirect('?page=patient-dashboard');
+    }
+
+    public function storeChild(): void
+    {
+        // Backward compatibility for older routes; defaults to kategori balita
+        $_POST['category'] = $_POST['category'] ?? 'toddler';
+        $this->storeFamily();
     }
 }

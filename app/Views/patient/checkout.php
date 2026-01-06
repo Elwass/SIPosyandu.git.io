@@ -1,3 +1,10 @@
+<?php
+$appConfig = require __DIR__ . '/../../config.php';
+$midtransClientKey = $appConfig['midtrans']['client_key'] ?? '';
+$midtransSnapBase = !empty($appConfig['midtrans']['is_production'])
+    ? 'https://app.midtrans.com'
+    : 'https://app.sandbox.midtrans.com';
+?>
 <?php include __DIR__ . '/../layouts/header.php'; ?>
 <section class="section">
     <div class="container">
@@ -10,6 +17,8 @@
         </div>
         <?php if (!$items): ?>
             <div class="alert alert-info">Keranjang kosong. Silakan pilih produk terlebih dahulu.</div>
+        <?php elseif (trim($midtransClientKey) === ''): ?>
+            <div class="alert alert-danger">Konfigurasi Midtrans tidak lengkap: Client Key belum diset di app/config.php.</div>
         <?php else: ?>
             <div class="row g-4">
                 <div class="col-lg-7">
@@ -57,72 +66,74 @@
         <?php endif; ?>
     </div>
 </section>
-<script>
-    const snapClientKey = '<?= htmlspecialchars(config('midtrans.client_key', '')) ?>';
-    const pickupSelect = document.getElementById('pickup_method');
-    const deliveryField = document.getElementById('delivery_address');
-    const checkoutForm = document.getElementById('checkout-form');
-    const payButton = document.getElementById('pay-button');
-    const paymentStatus = document.getElementById('payment-status');
-    if (pickupSelect) {
-        const toggleAddress = () => {
-            deliveryField.style.display = pickupSelect.value === 'DELIVERY' ? 'block' : 'none';
-        };
-        pickupSelect.addEventListener('change', toggleAddress);
-        toggleAddress();
-    }
+<?php if ($items && trim($midtransClientKey) !== ''): ?>
+    <script>
+        const snapClientKey = '<?= htmlspecialchars($midtransClientKey) ?>';
+        const pickupSelect = document.getElementById('pickup_method');
+        const deliveryField = document.getElementById('delivery_address');
+        const checkoutForm = document.getElementById('checkout-form');
+        const payButton = document.getElementById('pay-button');
+        const paymentStatus = document.getElementById('payment-status');
+        if (pickupSelect) {
+            const toggleAddress = () => {
+                deliveryField.style.display = pickupSelect.value === 'DELIVERY' ? 'block' : 'none';
+            };
+            pickupSelect.addEventListener('change', toggleAddress);
+            toggleAddress();
+        }
 
-    if (checkoutForm) {
-        checkoutForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!snapClientKey) {
-                alert('Client key Midtrans belum dikonfigurasi.');
-                return;
-            }
-
-            payButton.disabled = true;
-            paymentStatus.style.display = 'block';
-            paymentStatus.textContent = 'Memulai pembayaran...';
-
-            try {
-                const response = await fetch('<?= url('?page=checkout-create-payment') ?>', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        pickup_method: pickupSelect.value,
-                        address: deliveryField.querySelector('textarea').value
-                    })
-                });
-
-                const data = await response.json();
-                if (!response.ok || !data.token) {
-                    throw new Error(data.error || 'Gagal memulai pembayaran');
+        if (checkoutForm) {
+            checkoutForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!snapClientKey) {
+                    alert('Client key Midtrans belum dikonfigurasi.');
+                    return;
                 }
 
-                window.snap.pay(data.token, {
-                    onSuccess: function () {
-                        window.location.href = '<?= url('?page=orders') ?>';
-                    },
-                    onPending: function () {
-                        window.location.href = '<?= url('?page=orders') ?>';
-                    },
-                    onError: function () {
-                        window.location.href = '<?= url('?page=orders') ?>';
-                    },
-                    onClose: function () {
-                        paymentStatus.textContent = 'Popup ditutup sebelum menyelesaikan pembayaran.';
-                        payButton.disabled = false;
+                payButton.disabled = true;
+                paymentStatus.style.display = 'block';
+                paymentStatus.textContent = 'Memulai pembayaran...';
+
+                try {
+                    const response = await fetch('<?= url('?page=checkout-create-payment') ?>', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            pickup_method: pickupSelect.value,
+                            address: deliveryField.querySelector('textarea').value
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok || !data.token) {
+                        throw new Error(data.error || 'Gagal memulai pembayaran');
                     }
-                });
-            } catch (err) {
-                paymentStatus.textContent = err.message;
-                payButton.disabled = false;
-            }
-        });
-    }
-</script>
-<script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="<?= htmlspecialchars(config('midtrans.client_key', '')) ?>"></script>
+
+                    window.snap.pay(data.token, {
+                        onSuccess: function () {
+                            window.location.href = '<?= url('?page=orders') ?>';
+                        },
+                        onPending: function () {
+                            window.location.href = '<?= url('?page=orders') ?>';
+                        },
+                        onError: function () {
+                            window.location.href = '<?= url('?page=orders') ?>';
+                        },
+                        onClose: function () {
+                            paymentStatus.textContent = 'Popup ditutup sebelum menyelesaikan pembayaran.';
+                            payButton.disabled = false;
+                        }
+                    });
+                } catch (err) {
+                    paymentStatus.textContent = err.message;
+                    payButton.disabled = false;
+                }
+            });
+        }
+    </script>
+    <script src="<?= htmlspecialchars($midtransSnapBase) ?>/snap/snap.js" data-client-key="<?= htmlspecialchars($midtransClientKey) ?>"></script>
+<?php endif; ?>
 <?php include __DIR__ . '/../layouts/footer.php'; ?>
