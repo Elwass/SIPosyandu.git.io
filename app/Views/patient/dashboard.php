@@ -4,13 +4,13 @@
         <div class="section-header">
             <span class="section-eyebrow">Halo, <?= htmlspecialchars($patient['name']) ?></span>
             <h2 class="section-title">Ringkasan Keluarga</h2>
-            <p class="section-subtitle">Pantau status BPJS Anda dan perkembangan balita yang terhubung.</p>
+            <p class="section-subtitle">Pantau status BPJS Anda dan anggota keluarga yang terhubung.</p>
         </div>
 
         <div class="row g-4 mb-4">
             <div class="col-md-4">
                 <div class="stat-card">
-                    <span class="stat-label">Jumlah Balita</span>
+                    <span class="stat-label">Jumlah Keluarga</span>
                     <span class="stat-value"><?= count($children) ?></span>
                 </div>
             </div>
@@ -35,19 +35,19 @@
                 <div>
                     <h5 class="mb-1">Lengkapi data Anda</h5>
                     <p class="mb-0 text-muted">
-                        Tambah balita yang Anda asuh dan pastikan status BPJS sudah diisi untuk memudahkan pelayanan.
+                        Tambah data keluarga dan pastikan status BPJS sudah diisi untuk memudahkan pelayanan.
                     </p>
                 </div>
                 <div class="d-flex gap-2 mt-3 mt-lg-0">
                     <a href="<?= url('?page=patient-profile') ?>#bpjs" class="btn btn-outline-primary">Perbarui BPJS</a>
-                    <a href="<?= url('?page=patient-profile') ?>#children" class="btn btn-primary">Tambah Balita</a>
+                    <a href="<?= url('?page=patient-family-create') ?>" class="btn btn-primary">Tambah Data Keluarga</a>
                 </div>
             </div>
         </div>
 
         <div class="surface-card mb-4">
             <div class="surface-header">
-                <h3>Daftar Balita</h3>
+                <h3>Daftar Keluarga</h3>
             </div>
             <div class="surface-body">
                 <?php if ($children): ?>
@@ -56,6 +56,7 @@
                             <thead>
                                 <tr>
                                     <th>Nama</th>
+                                    <th>Kategori</th>
                                     <th>Tanggal Lahir</th>
                                     <th>Terakhir Ditimbang</th>
                                     <th>BB/TB Terakhir</th>
@@ -67,6 +68,7 @@
                                     <?php $latest = $latestMeasurements[$child['id']] ?? null; ?>
                                     <tr>
                                         <td><?= htmlspecialchars($child['name']) ?></td>
+                                        <td><span class="badge bg-soft-primary text-primary text-capitalize"><?= htmlspecialchars(str_replace('_', ' ', $child['category'])) ?></span></td>
                                         <td><?= date('d M Y', strtotime($child['birth_date'])) ?></td>
                                         <td><?= $latest ? date('d M Y', strtotime($latest['measured_at'])) : '-' ?></td>
                                         <td><?= $latest ? $latest['weight'] . ' kg / ' . $latest['height'] . ' cm' : '-' ?></td>
@@ -83,7 +85,7 @@
                         </table>
                     </div>
                 <?php else: ?>
-                    <p class="text-muted mb-0">Belum ada balita yang ditambahkan. Silakan tambahkan melalui halaman Profil.</p>
+                    <p class="text-muted mb-0">Belum ada data keluarga yang ditambahkan. Silakan tambahkan melalui halaman keluarga.</p>
                 <?php endif; ?>
             </div>
         </div>

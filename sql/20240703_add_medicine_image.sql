@@ -1,0 +1,1 @@
+ALTER TABLE medicines ADD COLUMN image VARCHAR(255) NULL AFTER stock;

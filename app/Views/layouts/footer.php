@@ -22,6 +22,13 @@
             </div>
         </div>
     </footer>
+    <?php
+    $currentUser = user();
+    $isAdminOrSuper = $currentUser && in_array($currentUser['role'], ['admin', 'super_admin'], true);
+    if ($isAdminOrSuper): ?>
+        </div><!-- /.admin-main -->
+    </div><!-- /.admin-layout -->
+    <?php endif; ?>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
