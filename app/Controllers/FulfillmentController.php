@@ -201,6 +201,7 @@ class FulfillmentController
             $recommendationId = (int) ($payload['recommendation_id'] ?? 0);
             $method = strtoupper(trim((string) ($payload['fulfillment_method'] ?? '')));
             $fulfillmentId = (int) ($payload['fulfillment_order_id'] ?? 0);
+            $requestSnap = !empty($payload['request_snap']);
             $address = $method === 'DELIVERY' ? trim((string) ($payload['address'] ?? '')) : null;
             $deliveryFee = $method === 'DELIVERY' ? max(0, (int) ($payload['delivery_fee'] ?? 0)) : 0;
 
@@ -261,6 +262,26 @@ class FulfillmentController
             }
 
             if ($method === 'SELF_BUY') {
+                $orderId = $order['id'] ?? $this->fulfillments->create([
+                    'recommendation_id' => $recommendationId,
+                    'resident_id' => $recommendation['resident_id'],
+                    'fulfillment_method' => $method,
+                    'address' => $address,
+                    'delivery_fee' => $deliveryFee,
+                    'total_amount' => $totalAmount,
+                    'payment_status' => 'UNPAID',
+                    'midtrans_order_id' => null,
+                ]);
+
+                echo json_encode([
+                    'token' => null,
+                    'order_id' => null,
+                    'fulfillment_order_id' => $orderId,
+                ]);
+                return;
+            }
+
+            if (!$requestSnap) {
                 $orderId = $order['id'] ?? $this->fulfillments->create([
                     'recommendation_id' => $recommendationId,
                     'resident_id' => $recommendation['resident_id'],

@@ -176,7 +176,8 @@ async function createPaymentToken() {
         fulfillment_method: fulfillmentMethod,
         fulfillment_order_id: fulfillmentOrderId,
         address: <?= json_encode($order['address'] ?? '') ?>,
-        delivery_fee: <?= (int) $order['delivery_fee'] ?>
+        delivery_fee: <?= (int) $order['delivery_fee'] ?>,
+        request_snap: true
     };
 
     payButton.disabled = true;
