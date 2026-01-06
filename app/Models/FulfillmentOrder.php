@@ -51,4 +51,12 @@ class FulfillmentOrder extends BaseModel
         $query = 'SELECT fo.*, r.notes, r.status AS recommendation_status, res.name AS resident_name, res.nik, res.phone FROM fulfillment_orders fo JOIN recommendations r ON r.id = fo.recommendation_id JOIN residents res ON res.id = fo.resident_id ORDER BY fo.created_at DESC';
         return $this->db->query($query)->fetchAll();
     }
+
+    public function latestForRecommendation(int $recommendationId): ?array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM fulfillment_orders WHERE recommendation_id = :id ORDER BY created_at DESC, id DESC LIMIT 1');
+        $stmt->execute(['id' => $recommendationId]);
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
 }

@@ -57,4 +57,10 @@ class Recommendation extends BaseModel
         $this->db->commit();
         return $recommendationId;
     }
+
+    public function updateStatus(int $id, string $status): void
+    {
+        $stmt = $this->db->prepare('UPDATE recommendations SET status = :status WHERE id = :id');
+        $stmt->execute(['status' => $status, 'id' => $id]);
+    }
 }

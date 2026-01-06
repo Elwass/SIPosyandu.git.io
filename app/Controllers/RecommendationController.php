@@ -25,6 +25,22 @@ class RecommendationController
         require_role(['pasien', 'super_admin', 'admin']);
         $id = (int) ($_GET['id'] ?? 0);
         $recommendation = $this->recommendations->findWithItems($id);
+        $latestOrder = null;
+
+        if ($recommendation) {
+            $user = user();
+            if ($user['role'] === 'pasien') {
+                $residentIds = $this->residentIdsForUser((int) $user['id']);
+                if ($residentIds && !in_array((int) $recommendation['resident_id'], $residentIds, true)) {
+                    http_response_code(403);
+                    include __DIR__ . '/../Views/errors/403.php';
+                    return;
+                }
+            }
+
+            $fulfillment = new FulfillmentOrder();
+            $latestOrder = $fulfillment->latestForRecommendation($recommendation['id']);
+        }
         include __DIR__ . '/../Views/patient/recommendation_detail.php';
     }
 

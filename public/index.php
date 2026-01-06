@@ -43,6 +43,16 @@ if ($action) {
                 $fulfillmentController->checkStatus();
             }
             break;
+        case 'payment-create':
+            if ($method === 'POST') {
+                $fulfillmentController->paymentCreate();
+            }
+            break;
+        case 'payment-sync-status':
+            if ($method === 'POST') {
+                $fulfillmentController->syncStatus();
+            }
+            break;
         default:
             http_response_code(404);
             include __DIR__ . '/../app/Views/errors/404.php';
