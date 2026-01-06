@@ -48,11 +48,9 @@ class Snap
     }
 }
 
-// Initialize configuration from app config if helpers are loaded
-if (function_exists('config')) {
-    Config::$serverKey = config('midtrans.server_key', Config::$serverKey);
-    Config::$clientKey = config('midtrans.client_key', Config::$clientKey);
-    Config::$isProduction = config('midtrans.is_production', Config::$isProduction);
-    Config::$isSanitized = true;
-    Config::$is3ds = true;
-}
+$appConfig = require __DIR__ . '/../config.php';
+Config::$serverKey = $appConfig['midtrans']['server_key'] ?? Config::$serverKey;
+Config::$clientKey = $appConfig['midtrans']['client_key'] ?? Config::$clientKey;
+Config::$isProduction = $appConfig['midtrans']['is_production'] ?? Config::$isProduction;
+Config::$isSanitized = true;
+Config::$is3ds = true;

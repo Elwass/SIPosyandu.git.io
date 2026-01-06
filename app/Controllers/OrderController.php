@@ -120,7 +120,8 @@ class OrderController
         $order = $this->orders->find($orderId);
         $orderItems = $this->orders->items($orderId);
         $snapToken = $tokenData['token'];
-        $clientKey = config('midtrans.client_key', '');
+        $appConfig = require __DIR__ . '/../config.php';
+        $clientKey = $appConfig['midtrans']['client_key'] ?? '';
         include __DIR__ . '/../Views/patient/checkout_payment.php';
     }
 
