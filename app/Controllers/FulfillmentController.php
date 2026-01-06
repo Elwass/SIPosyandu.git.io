@@ -2,6 +2,7 @@
 
 use Midtrans\Config;
 use Midtrans\Snap;
+use Midtrans\Transaction;
 
 class FulfillmentController
 {
@@ -182,6 +183,10 @@ class FulfillmentController
     public function paymentCreate(): void
     {
         header('Content-Type: application/json; charset=utf-8');
+        ini_set('display_errors', '0');
+        if (ob_get_length()) {
+            ob_clean();
+        }
 
         try {
             if (!is_logged_in()) {
@@ -197,8 +202,9 @@ class FulfillmentController
                 return;
             }
 
-            $payload = json_decode(file_get_contents('php://input'), true) ?? [];
-            $fulfillmentId = (int) ($payload['fulfillment_order_id'] ?? 0);
+            $rawInput = file_get_contents('php://input');
+            $payload = $rawInput ? json_decode($rawInput, true) : [];
+            $fulfillmentId = (int) ($_POST['fulfillment_order_id'] ?? ($payload['fulfillment_order_id'] ?? 0));
             if ($fulfillmentId <= 0) {
                 http_response_code(400);
                 echo json_encode(['success' => false, 'message' => 'ID pemenuhan tidak valid']);
@@ -228,21 +234,19 @@ class FulfillmentController
             }
 
             if ($order['fulfillment_method'] === 'SELF_BUY') {
+                http_response_code(400);
                 echo json_encode([
-                    'success' => true,
-                    'token' => null,
-                    'redirect_url' => url('?page=order-payment-detail&id=' . $fulfillmentId),
-                    'fulfillment_order_id' => $fulfillmentId,
+                    'success' => false,
+                    'message' => 'Metode Self Buy tidak memerlukan pembayaran online',
                 ]);
                 return;
             }
 
             if (strtoupper((string) $order['payment_status']) === 'PAID') {
+                http_response_code(400);
                 echo json_encode([
-                    'success' => true,
-                    'token' => null,
-                    'redirect_url' => url('?page=order-payment-detail&id=' . $fulfillmentId),
-                    'fulfillment_order_id' => $fulfillmentId,
+                    'success' => false,
+                    'message' => 'Pesanan sudah dibayar',
                 ]);
                 return;
             }
@@ -278,7 +282,10 @@ class FulfillmentController
             Config::$isSanitized = true;
             Config::$is3ds = true;
 
-            $midtransOrderId = $order['midtrans_order_id'] ?? $this->generateUniqueMidtransId((int) $order['recommendation_id']);
+            $midtransOrderId = $order['midtrans_order_id'] ?: $this->generateUniqueMidtransId((int) $order['recommendation_id']);
+            if (empty($order['midtrans_order_id'])) {
+                $this->fulfillments->updateMidtransOrder($fulfillmentId, $midtransOrderId);
+            }
             $payloadSnap = [
                 'transaction_details' => [
                     'order_id' => $midtransOrderId,
@@ -292,13 +299,13 @@ class FulfillmentController
                 ],
             ];
 
-            $snapToken = Snap::getSnapToken($payloadSnap);
-            $token = is_array($snapToken) ? ($snapToken['token'] ?? null) : $snapToken;
+            $snapResponse = Snap::createTransaction($payloadSnap);
+            $token = is_array($snapResponse) ? ($snapResponse['token'] ?? null) : null;
             if (!$token) {
                 $this->logMidtransError('snap-token-failed', [
                     'order_id' => $midtransOrderId,
                     'payload' => $payloadSnap,
-                    'response' => $snapToken,
+                    'response' => $snapResponse,
                 ]);
                 http_response_code(500);
                 echo json_encode(['success' => false, 'message' => 'Gagal membuat pembayaran']);
@@ -311,9 +318,7 @@ class FulfillmentController
             echo json_encode([
                 'success' => true,
                 'token' => $token,
-                'order_id' => $midtransOrderId,
-                'fulfillment_order_id' => $fulfillmentId,
-                'redirect_url' => url('?page=order-payment-detail&id=' . $fulfillmentId),
+                'redirect_url' => is_array($snapResponse) ? ($snapResponse['redirect_url'] ?? null) : null,
             ]);
         } catch (Throwable $e) {
             $this->logMidtransError('payment-create-exception', [
@@ -327,6 +332,10 @@ class FulfillmentController
     public function paymentStatus(): void
     {
         header('Content-Type: application/json; charset=utf-8');
+        ini_set('display_errors', '0');
+        if (ob_get_length()) {
+            ob_clean();
+        }
 
         try {
             if (!is_logged_in()) {
@@ -364,10 +373,11 @@ class FulfillmentController
             }
 
             if (empty($order['midtrans_order_id'])) {
+                http_response_code(400);
                 echo json_encode([
-                    'success' => true,
+                    'success' => false,
+                    'message' => 'Belum ada transaksi Midtrans untuk pesanan ini',
                     'payment_status' => $order['payment_status'],
-                    'midtrans_status' => null,
                 ]);
                 return;
             }
@@ -380,31 +390,13 @@ class FulfillmentController
                 return;
             }
 
-            $isProduction = (bool) ($appConfig['midtrans']['is_production'] ?? false);
-            $baseUrl = $isProduction ? 'https://api.midtrans.com/v2/' : 'https://api.sandbox.midtrans.com/v2/';
-            $endpoint = $baseUrl . $order['midtrans_order_id'] . '/status';
+            Config::$serverKey = $serverKey;
+            Config::$isProduction = (bool) ($appConfig['midtrans']['is_production'] ?? false);
+            Config::$isSanitized = true;
+            Config::$is3ds = true;
 
-            $ch = curl_init($endpoint);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_USERPWD, $serverKey . ':');
-            $response = curl_exec($ch);
-            $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            if ($statusCode < 200 || $statusCode >= 300 || !$response) {
-                $this->logMidtransError('payment-status-failed', [
-                    'fulfillment_order_id' => $fulfillmentId,
-                    'order_id' => $order['midtrans_order_id'],
-                    'status_code' => $statusCode,
-                    'response' => $response,
-                ]);
-                http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'Gagal memeriksa status pembayaran']);
-                return;
-            }
-
-            $data = json_decode($response, true);
-            $midtransStatus = $data['transaction_status'] ?? 'unknown';
+            $data = Transaction::status($order['midtrans_order_id']);
+            $midtransStatus = is_array($data) ? ($data['transaction_status'] ?? 'unknown') : 'unknown';
             $mappedStatus = $this->mapMidtransStatus($midtransStatus);
             $this->fulfillments->updateStatus($fulfillmentId, $mappedStatus);
 
@@ -625,10 +617,7 @@ class FulfillmentController
         if ($midtransStatus === 'expire') {
             return 'EXPIRED';
         }
-        if ($midtransStatus === 'cancel') {
-            return 'FAILED';
-        }
-        if ($midtransStatus === 'deny') {
+        if (in_array($midtransStatus, ['cancel', 'deny', 'failure'], true)) {
             return 'FAILED';
         }
         return 'PENDING';
