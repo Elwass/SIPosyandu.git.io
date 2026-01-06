@@ -2,6 +2,7 @@
 require __DIR__ . '/../app/bootstrap.php';
 
 $page = $_GET['page'] ?? (is_logged_in() ? (user()['role'] === 'pasien' ? 'patient-dashboard' : 'dashboard') : 'landing');
+$action = $_GET['action'] ?? null;
 $method = $_SERVER['REQUEST_METHOD'];
 
 $authController = new AuthController();
@@ -10,6 +11,54 @@ $cartController = new CartController();
 $orderController = new OrderController();
 $midtransWebhook = new MidtransWebhookController();
 $checkoutController = new CheckoutController();
+$bookingController = new BookingController();
+$medicineController = new MedicineController();
+$recommendationController = new RecommendationController();
+$fulfillmentController = new FulfillmentController();
+
+if ($action) {
+    switch ($action) {
+        case 'booking-pay':
+            if ($method === 'POST') {
+                $bookingController->pay($_GET['code'] ?? '');
+            }
+            break;
+        case 'booking-check-status':
+            if ($method === 'POST') {
+                $bookingController->checkStatus($_GET['code'] ?? '');
+            }
+            break;
+        case 'create-fulfillment-order':
+            if ($method === 'POST') {
+                $fulfillmentController->create();
+            }
+            break;
+        case 'pay-fulfillment-order':
+            if ($method === 'POST') {
+                $fulfillmentController->pay();
+            }
+            break;
+        case 'check-fulfillment-status':
+            if ($method === 'POST') {
+                $fulfillmentController->checkStatus();
+            }
+            break;
+        case 'payment-create':
+            if ($method === 'POST') {
+                $fulfillmentController->paymentCreate();
+            }
+            break;
+        case 'payment-sync-status':
+            if ($method === 'POST') {
+                $fulfillmentController->syncStatus();
+            }
+            break;
+        default:
+            http_response_code(404);
+            include __DIR__ . '/../app/Views/errors/404.php';
+    }
+    return;
+}
 
 switch ($page) {
     case 'landing':
@@ -47,8 +96,27 @@ switch ($page) {
     case 'patient-bpjs-update':
         (new PatientController())->updateBpjs();
         break;
+    case 'patient-family-create':
+        (new PatientController())->createFamily();
+        break;
+    case 'patient-family-store':
+        if ($method === 'POST') {
+            (new PatientController())->storeFamily();
+        }
+        break;
     case 'patient-child-store':
         (new PatientController())->storeChild();
+        break;
+    case 'medicines':
+        if (!is_logged_in()) {
+            redirect('?page=login');
+        }
+        if (in_array(user()['role'], ['super_admin', 'admin'], true)) {
+            $medicineController->adminIndex();
+        } else {
+            http_response_code(404);
+            include __DIR__ . '/../app/Views/errors/404.php';
+        }
         break;
     case 'products':
         $productController->catalog();
@@ -84,11 +152,34 @@ switch ($page) {
             $orderController->processCheckout();
         }
         break;
+    case 'booking-detail':
+        $bookingController->show($_GET['code'] ?? '');
+        break;
     case 'orders':
         $orderController->patientOrders();
         break;
     case 'order-detail':
         $orderController->orderDetail();
+        break;
+    case 'patient-recommendations':
+        $recommendationController->patientList();
+        break;
+    case 'recommendation-detail':
+        $recommendationController->patientDetail();
+        break;
+    case 'recommendations':
+        if (!is_logged_in()) {
+            redirect('?page=login');
+        }
+        $user = user();
+        if ($user['role'] === 'pasien') {
+            $recommendationController->patientList();
+        } elseif (in_array($user['role'], ['super_admin', 'admin'], true)) {
+            $recommendationController->adminIndex();
+        } else {
+            http_response_code(404);
+            include __DIR__ . '/../app/Views/errors/404.php';
+        }
         break;
     case 'residents':
         if (!is_logged_in()) {
@@ -169,6 +260,49 @@ switch ($page) {
     case 'admin-products-delete':
         if ($method === 'POST') {
             $productController->destroy();
+        }
+        break;
+    case 'admin-medicines':
+        $medicineController->adminIndex();
+        break;
+    case 'admin-medicines-store':
+        if ($method === 'POST') {
+            $medicineController->store();
+        }
+        break;
+    case 'admin-medicines-update':
+        if ($method === 'POST') {
+            $medicineController->update();
+        }
+        break;
+    case 'admin-medicines-delete':
+        if ($method === 'POST') {
+            $medicineController->destroy();
+        }
+        break;
+    case 'fulfillment-orders':
+        if (!is_logged_in()) {
+            redirect('?page=login');
+        }
+        $user = user();
+        if ($user['role'] === 'pasien') {
+            $fulfillmentController->patientIndex();
+        } elseif (in_array($user['role'], ['super_admin', 'admin'], true)) {
+            $fulfillmentController->adminIndex();
+        } else {
+            http_response_code(404);
+            include __DIR__ . '/../app/Views/errors/404.php';
+        }
+        break;
+    case 'admin-recommendations':
+        $recommendationController->adminIndex();
+        break;
+    case 'admin-recommendations-create':
+        $recommendationController->createForm();
+        break;
+    case 'admin-recommendations-store':
+        if ($method === 'POST') {
+            $recommendationController->store();
         }
         break;
     case 'admin-orders':

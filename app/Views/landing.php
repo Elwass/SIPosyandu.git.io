@@ -7,8 +7,8 @@
                 <h1 class="hero-title">Pelayanan Posyandu Kini <span>Lebih Mudah</span> Untuk Semua</h1>
                 <p class="hero-text">Kelola pendaftaran warga, penimbangan gizi, jadwal imunisasi, dan laporan otomatis dalam satu platform berbasis web.</p>
                 <div class="hero-actions">
-                    <a href="<?= url('?page=login') ?>" class="btn btn-primary btn-lg">Masuk Petugas</a>
-                    <a href="<?= url('?page=patient-register') ?>" class="btn btn-outline-primary btn-lg">Daftar Pasien</a>
+                    <a href="<?= url('?page=login') ?>" class="btn btn-outline-primary btn-lg">Masuk</a>
+                    <a href="<?= url('?page=patient-register') ?>" class="btn btn-primary btn-lg">Daftar</a>
                 </div>
                 <div class="hero-stats">
                     <div>
