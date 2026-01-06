@@ -57,7 +57,8 @@ class Database
     {
         $requiredTables = [
             'users', 'residents', 'bpjs_profiles', 'patient_children', 'measurements', 'immunizations', 'reminders',
-            'products', 'orders', 'order_items', 'payments', 'bookings'
+            'products', 'orders', 'order_items', 'payments', 'bookings',
+            'medicines', 'recommendations', 'recommendation_items', 'fulfillment_orders'
         ];
 
         $hasMissingTables = self::isMissingTables($pdo, $requiredTables);
@@ -251,6 +252,61 @@ CREATE TABLE IF NOT EXISTS payments (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_payments_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE=utf8mb4_unicode_ci;
+SQL);
+
+        $pdo->exec(<<<SQL
+CREATE TABLE IF NOT EXISTS medicines (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    unit VARCHAR(50) NOT NULL,
+    price INT NOT NULL DEFAULT 0,
+    stock INT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE=utf8mb4_unicode_ci;
+SQL);
+
+        $pdo->exec(<<<SQL
+CREATE TABLE IF NOT EXISTS recommendations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    patient_id INT NOT NULL,
+    admin_id INT NOT NULL,
+    notes TEXT NULL,
+    status ENUM('SENT','CONFIRMED','FULFILLED','CANCELLED') NOT NULL DEFAULT 'SENT',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_rec_patient FOREIGN KEY (patient_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_rec_admin FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE=utf8mb4_unicode_ci;
+SQL);
+
+        $pdo->exec(<<<SQL
+CREATE TABLE IF NOT EXISTS recommendation_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    recommendation_id INT NOT NULL,
+    medicine_id INT NOT NULL,
+    qty INT NOT NULL,
+    dosage VARCHAR(255) NOT NULL,
+    note VARCHAR(255) NULL,
+    CONSTRAINT fk_rec_item_header FOREIGN KEY (recommendation_id) REFERENCES recommendations(id) ON DELETE CASCADE,
+    CONSTRAINT fk_rec_item_medicine FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE=utf8mb4_unicode_ci;
+SQL);
+
+        $pdo->exec(<<<SQL
+CREATE TABLE IF NOT EXISTS fulfillment_orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    recommendation_id INT NOT NULL,
+    patient_id INT NOT NULL,
+    fulfillment_method ENUM('PICKUP','DELIVERY','SELF_BUY') NOT NULL,
+    address TEXT NULL,
+    delivery_fee INT NOT NULL DEFAULT 0,
+    total_amount INT NOT NULL DEFAULT 0,
+    payment_status ENUM('UNPAID','PENDING','PAID','FAILED') NOT NULL DEFAULT 'UNPAID',
+    midtrans_order_id VARCHAR(190) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_fulfillment_rec FOREIGN KEY (recommendation_id) REFERENCES recommendations(id) ON DELETE CASCADE,
+    CONSTRAINT fk_fulfillment_patient FOREIGN KEY (patient_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE=utf8mb4_unicode_ci;
 SQL);
 

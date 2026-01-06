@@ -12,6 +12,9 @@ $orderController = new OrderController();
 $midtransWebhook = new MidtransWebhookController();
 $checkoutController = new CheckoutController();
 $bookingController = new BookingController();
+$medicineController = new MedicineController();
+$recommendationController = new RecommendationController();
+$fulfillmentController = new FulfillmentController();
 
 if ($action) {
     switch ($action) {
@@ -23,6 +26,21 @@ if ($action) {
         case 'booking-check-status':
             if ($method === 'POST') {
                 $bookingController->checkStatus($_GET['code'] ?? '');
+            }
+            break;
+        case 'create-fulfillment-order':
+            if ($method === 'POST') {
+                $fulfillmentController->create();
+            }
+            break;
+        case 'pay-fulfillment-order':
+            if ($method === 'POST') {
+                $fulfillmentController->pay();
+            }
+            break;
+        case 'check-fulfillment-status':
+            if ($method === 'POST') {
+                $fulfillmentController->checkStatus();
             }
             break;
         default:
@@ -114,6 +132,12 @@ switch ($page) {
     case 'order-detail':
         $orderController->orderDetail();
         break;
+    case 'patient-recommendations':
+        $recommendationController->patientList();
+        break;
+    case 'recommendation-detail':
+        $recommendationController->patientDetail();
+        break;
     case 'residents':
         if (!is_logged_in()) {
             redirect('?page=login');
@@ -193,6 +217,30 @@ switch ($page) {
     case 'admin-products-delete':
         if ($method === 'POST') {
             $productController->destroy();
+        }
+        break;
+    case 'admin-medicines':
+        $medicineController->adminIndex();
+        break;
+    case 'admin-medicines-store':
+        if ($method === 'POST') {
+            $medicineController->store();
+        }
+        break;
+    case 'admin-medicines-update':
+        if ($method === 'POST') {
+            $medicineController->update();
+        }
+        break;
+    case 'admin-recommendations':
+        $recommendationController->adminIndex();
+        break;
+    case 'admin-recommendations-create':
+        $recommendationController->createForm();
+        break;
+    case 'admin-recommendations-store':
+        if ($method === 'POST') {
+            $recommendationController->store();
         }
         break;
     case 'admin-orders':
