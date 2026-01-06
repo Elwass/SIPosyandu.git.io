@@ -24,12 +24,13 @@ class Medicine extends BaseModel
 
     public function create(array $data): int
     {
-        $stmt = $this->db->prepare('INSERT INTO medicines (name, unit, price, stock, is_active) VALUES (:name, :unit, :price, :stock, :is_active)');
+        $stmt = $this->db->prepare('INSERT INTO medicines (name, unit, price, stock, image, is_active) VALUES (:name, :unit, :price, :stock, :image, :is_active)');
         $stmt->execute([
             'name' => $data['name'],
             'unit' => $data['unit'],
             'price' => $data['price'],
             'stock' => $data['stock'],
+            'image' => $data['image'],
             'is_active' => $data['is_active'],
         ]);
 
@@ -38,14 +39,21 @@ class Medicine extends BaseModel
 
     public function update(int $id, array $data): void
     {
-        $stmt = $this->db->prepare('UPDATE medicines SET name = :name, unit = :unit, price = :price, stock = :stock, is_active = :is_active WHERE id = :id');
+        $stmt = $this->db->prepare('UPDATE medicines SET name = :name, unit = :unit, price = :price, stock = :stock, image = :image, is_active = :is_active WHERE id = :id');
         $stmt->execute([
             'id' => $id,
             'name' => $data['name'],
             'unit' => $data['unit'],
             'price' => $data['price'],
             'stock' => $data['stock'],
+            'image' => $data['image'],
             'is_active' => $data['is_active'],
         ]);
+    }
+
+    public function delete(int $id): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM medicines WHERE id = :id');
+        $stmt->execute(['id' => $id]);
     }
 }

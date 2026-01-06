@@ -257,6 +257,11 @@ switch ($page) {
             $medicineController->update();
         }
         break;
+    case 'admin-medicines-delete':
+        if ($method === 'POST') {
+            $medicineController->destroy();
+        }
+        break;
     case 'fulfillment-orders':
         if (!is_logged_in()) {
             redirect('?page=login');

@@ -35,6 +35,7 @@
                             <table class="table table-modern">
                                 <thead>
                                     <tr>
+                                        <th>Gambar</th>
                                         <th>Obat</th>
                                         <th>Qty</th>
                                         <th>Aturan Pakai</th>
@@ -45,6 +46,13 @@
                                 <tbody>
                                     <?php $subtotal = 0; foreach ($recommendation['items'] as $item): $line = ((int)$item['qty']) * ((int)$item['price']); $subtotal += $line; ?>
                                         <tr>
+                                            <td>
+                                                <?php if (!empty($item['image'])): ?>
+                                                    <img src="<?= url($item['image']) ?>" alt="<?= htmlspecialchars($item['medicine_name']) ?>" style="width:60px;height:60px;object-fit:cover;" class="rounded">
+                                                <?php else: ?>
+                                                    <span class="text-muted small">-</span>
+                                                <?php endif; ?>
+                                            </td>
                                             <td><?= htmlspecialchars($item['medicine_name']) ?></td>
                                             <td><?= (int)$item['qty'] ?> <?= htmlspecialchars($item['unit']) ?></td>
                                             <td><?= htmlspecialchars($item['dosage']) ?></td>

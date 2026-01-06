@@ -18,7 +18,7 @@ class Recommendation extends BaseModel
             return null;
         }
 
-        $itemsStmt = $this->db->prepare('SELECT ri.*, m.name AS medicine_name, m.unit, m.price FROM recommendation_items ri JOIN medicines m ON m.id = ri.medicine_id WHERE ri.recommendation_id = :id');
+        $itemsStmt = $this->db->prepare('SELECT ri.*, m.name AS medicine_name, m.unit, m.price, m.image FROM recommendation_items ri JOIN medicines m ON m.id = ri.medicine_id WHERE ri.recommendation_id = :id');
         $itemsStmt->execute(['id' => $id]);
         $header['items'] = $itemsStmt->fetchAll();
 

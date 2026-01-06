@@ -131,6 +131,7 @@ CREATE TABLE medicines (
     unit VARCHAR(50) NOT NULL,
     price INT NOT NULL DEFAULT 0,
     stock INT NULL,
+    image VARCHAR(255) NULL,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
