@@ -108,20 +108,40 @@ $currentFulfillmentMethod = $latestOrder['fulfillment_method'] ?? null;
                     <div class="surface-header">
                         <h5 class="mb-0">Pemenuhan & Pembayaran</h5>
                     </div>
-                    <div class="surface-body">
-                        <form id="fulfillment-form">
-                            <input type="hidden" name="recommendation_id" value="<?= $recommendation['id'] ?>">
-                            <div class="mb-3">
-                                <label class="form-label">Metode Pemenuhan</label>
-                                <select class="form-select" name="fulfillment_method" id="fulfillment_method" required>
-                                    <option value="PICKUP" <?= $currentFulfillmentMethod === 'PICKUP' ? 'selected' : '' ?>>Pickup (ambil di posyandu)</option>
-                                    <option value="DELIVERY" <?= $currentFulfillmentMethod === 'DELIVERY' ? 'selected' : '' ?>>Delivery (antar)</option>
-                                    <option value="SELF_BUY" <?= $currentFulfillmentMethod === 'SELF_BUY' ? 'selected' : '' ?>>Self Buy (beli sendiri)</option>
-                                </select>
+                    <div class="surface-card" id="payment-section">
+                        <div class="surface-header">
+                            <h5 class="mb-0">Pembayaran</h5>
+                        </div>
+                        <div class="surface-body">
+                            <?php if (!$clientKey): ?>
+                                <div class="alert alert-danger">Client Key Midtrans belum diisi di app/config.php</div>
+                            <?php endif; ?>
+                            <p class="mb-2">Total: <strong id="payment-total">Rp<?= number_format($subtotal, 0, ',', '.') ?></strong></p>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-success" id="pay-button" type="button">Bayar Sekarang</button>
+                                <button class="btn btn-outline-secondary" id="refresh-button" type="button" <?= $currentFulfillmentId ? '' : 'disabled' ?>>Refresh Status</button>
                             </div>
-                            <div class="mb-3 d-none" id="delivery-address">
-                                <label class="form-label">Alamat Pengantaran</label>
-                                <textarea class="form-control" name="address" rows="3" placeholder="Alamat lengkap"></textarea>
+                            <div class="mb-3">
+                                <p class="mb-1 text-muted">Total</p>
+                                <h5 class="mb-0">Rp<?= number_format($subtotal, 0, ',', '.') ?></h5>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-success" id="pay-button" type="submit">Bayar Sekarang</button>
+                                <button class="btn btn-outline-secondary" id="refresh-button" type="button" <?= $currentFulfillmentId ? '' : 'disabled' ?>>Perbarui Status</button>
+                                <?php if ($currentFulfillmentId): ?>
+                                    <a class="btn btn-outline-primary" href="<?= url('?page=order-payment-detail&id=' . $currentFulfillmentId) ?>">Lihat Detail Pesanan</a>
+                                <?php endif; ?>
+                            </div>
+                            <div class="mb-3">
+                                <p class="mb-1 text-muted">Total</p>
+                                <h5 class="mb-0">Rp<?= number_format($subtotal, 0, ',', '.') ?></h5>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-success" id="pay-button" type="submit">Bayar Sekarang</button>
+                                <button class="btn btn-outline-secondary" id="refresh-button" type="button" <?= $currentFulfillmentId ? '' : 'disabled' ?>>Perbarui Status</button>
+                                <?php if ($currentFulfillmentId): ?>
+                                    <a class="btn btn-outline-primary" href="<?= url('?page=order-payment-detail&id=' . $currentFulfillmentId) ?>">Lihat Detail Pesanan</a>
+                                <?php endif; ?>
                             </div>
                             <div class="mb-3">
                                 <p class="mb-1 text-muted">Total</p>
@@ -148,6 +168,7 @@ $currentFulfillmentMethod = $latestOrder['fulfillment_method'] ?? null;
 <script>
 const form = document.getElementById('fulfillment-form');
 const payButton = document.getElementById('pay-button');
+const processButton = document.getElementById('process-button');
 const refreshButton = document.getElementById('refresh-button');
 const fulfillmentMethod = document.getElementById('fulfillment_method');
 const deliveryAddress = document.getElementById('delivery-address');
