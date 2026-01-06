@@ -3,8 +3,9 @@ class PaymentController
 {
     public function createSnapToken(string $orderId, float $amount, array $items, array $customer, array $metadata = []): ?array
     {
-        $serverKey = config('midtrans.server_key', '');
-        $clientKey = config('midtrans.client_key', '');
+        $appConfig = require __DIR__ . '/../config.php';
+        $serverKey = $appConfig['midtrans']['server_key'] ?? '';
+        $clientKey = $appConfig['midtrans']['client_key'] ?? '';
         if ($serverKey === '' || $clientKey === '') {
             return null;
         }
@@ -33,7 +34,7 @@ class PaymentController
             'metadata' => $metadata,
         ];
 
-        $isProduction = config('midtrans.is_production', false);
+        $isProduction = $appConfig['midtrans']['is_production'] ?? false;
         $endpoint = $isProduction ? 'https://app.midtrans.com/snap/v1/transactions' : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
 
         $ch = curl_init($endpoint);
