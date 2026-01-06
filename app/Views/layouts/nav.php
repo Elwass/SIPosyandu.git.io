@@ -2,6 +2,16 @@
 $currentUser = user();
 $currentPage = $_GET['page'] ?? ($currentUser ? 'dashboard' : 'landing');
 $baseLandingUrl = url('?page=landing');
+$isAdminOrSuper = $currentUser && in_array($currentUser['role'], ['admin', 'super_admin'], true);
+$layananPages = ['measurements', 'immunizations', 'reminders'];
+$isLayananActive = in_array($currentPage, $layananPages, true);
+$isMasterActive = $isAdminOrSuper && (
+    $currentPage === 'medicines'
+    || str_starts_with($currentPage, 'admin-medicines')
+    || $currentPage === 'users'
+);
+$reportPages = ['reports', 'fulfillment-orders'];
+$isReportActive = in_array($currentPage, $reportPages, true);
 ?>
 <header class="site-header">
     <nav class="navbar navbar-expand-lg site-navbar">
@@ -24,16 +34,31 @@ $baseLandingUrl = url('?page=landing');
                         <?php else: ?>
                             <li class="nav-item"><a class="nav-link <?= $currentPage === 'dashboard' ? 'active' : '' ?>" href="<?= url('?page=dashboard') ?>">Dashboard</a></li>
                             <li class="nav-item"><a class="nav-link <?= $currentPage === 'residents' ? 'active' : '' ?>" href="<?= url('?page=residents') ?>">Data Warga</a></li>
-                            <li class="nav-item"><a class="nav-link <?= $currentPage === 'measurements' ? 'active' : '' ?>" href="<?= url('?page=measurements') ?>">Penimbangan</a></li>
-                            <li class="nav-item"><a class="nav-link <?= $currentPage === 'immunizations' ? 'active' : '' ?>" href="<?= url('?page=immunizations') ?>">Imunisasi</a></li>
-                            <li class="nav-item"><a class="nav-link <?= $currentPage === 'reminders' ? 'active' : '' ?>" href="<?= url('?page=reminders') ?>">Reminder</a></li>
-                            <li class="nav-item"><a class="nav-link <?= $currentPage === 'reports' ? 'active' : '' ?>" href="<?= url('?page=reports') ?>">Laporan</a></li>
-                            <?php if (in_array($currentUser['role'], ['super_admin', 'admin'], true)): ?>
-                                <li class="nav-item"><a class="nav-link <?= $currentPage === 'medicines' || str_starts_with($currentPage, 'admin-medicines') ? 'active' : '' ?>" href="<?= url('?page=medicines') ?>">Obat</a></li>
-                                <li class="nav-item"><a class="nav-link <?= $currentPage === 'recommendations' || str_starts_with($currentPage, 'admin-recommendations') ? 'active' : '' ?>" href="<?= url('?page=recommendations') ?>">Rekomendasi</a></li>
-                                <li class="nav-item"><a class="nav-link <?= $currentPage === 'fulfillment-orders' ? 'active' : '' ?>" href="<?= url('?page=fulfillment-orders') ?>">Pemenuhan</a></li>
-                                <li class="nav-item"><a class="nav-link <?= $currentPage === 'users' ? 'active' : '' ?>" href="<?= url('?page=users') ?>">Pengguna</a></li>
+                            <li class="nav-item"><a class="nav-link <?= $currentPage === 'recommendations' || str_starts_with($currentPage, 'admin-recommendations') ? 'active' : '' ?>" href="<?= url('?page=recommendations') ?>">Rekomendasi</a></li>
+                            <li class="nav-item custom-dropdown <?= $isLayananActive ? 'active open' : '' ?>">
+                                <a href="#" class="nav-link dropdown-toggle" data-dropdown-toggle="layanan">Layanan</a>
+                                <ul class="dropdown-menu custom-dropdown-menu" data-dropdown-menu="layanan">
+                                    <li><a class="dropdown-item <?= $currentPage === 'measurements' ? 'active' : '' ?>" href="<?= url('?page=measurements') ?>">Penimbangan</a></li>
+                                    <li><a class="dropdown-item <?= $currentPage === 'immunizations' ? 'active' : '' ?>" href="<?= url('?page=immunizations') ?>">Imunisasi</a></li>
+                                    <li><a class="dropdown-item <?= $currentPage === 'reminders' ? 'active' : '' ?>" href="<?= url('?page=reminders') ?>">Reminder</a></li>
+                                </ul>
+                            </li>
+                            <?php if ($isAdminOrSuper): ?>
+                                <li class="nav-item custom-dropdown <?= $isMasterActive ? 'active open' : '' ?>">
+                                    <a href="#" class="nav-link dropdown-toggle" data-dropdown-toggle="master">Master</a>
+                                    <ul class="dropdown-menu custom-dropdown-menu" data-dropdown-menu="master">
+                                        <li><a class="dropdown-item <?= $currentPage === 'medicines' || str_starts_with($currentPage, 'admin-medicines') ? 'active' : '' ?>" href="<?= url('?page=medicines') ?>">Obat</a></li>
+                                        <li><a class="dropdown-item <?= $currentPage === 'users' ? 'active' : '' ?>" href="<?= url('?page=users') ?>">Pengguna</a></li>
+                                    </ul>
+                                </li>
                             <?php endif; ?>
+                            <li class="nav-item custom-dropdown <?= $isReportActive ? 'active open' : '' ?>">
+                                <a href="#" class="nav-link dropdown-toggle" data-dropdown-toggle="report">Laporan</a>
+                                <ul class="dropdown-menu custom-dropdown-menu" data-dropdown-menu="report">
+                                    <li><a class="dropdown-item <?= $currentPage === 'reports' ? 'active' : '' ?>" href="<?= url('?page=reports') ?>">Laporan</a></li>
+                                    <li><a class="dropdown-item <?= $currentPage === 'fulfillment-orders' ? 'active' : '' ?>" href="<?= url('?page=fulfillment-orders') ?>">Pemenuhan</a></li>
+                                </ul>
+                            </li>
                         <?php endif; ?>
                         <li class="nav-item nav-item--profile">
                             <span class="badge rounded-pill bg-soft-primary text-primary me-lg-3">
@@ -62,3 +87,74 @@ $baseLandingUrl = url('?page=landing');
         </div>
     </nav>
 </header>
+<style>
+    .custom-dropdown {
+        position: relative;
+    }
+    .custom-dropdown > .nav-link.dropdown-toggle::after {
+        content: '\25BE';
+        font-size: 0.75rem;
+        margin-left: 0.35rem;
+    }
+    .custom-dropdown .custom-dropdown-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        min-width: 200px;
+        background: #ffffff;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+        padding: 0.5rem 0;
+        display: none;
+        z-index: 1050;
+    }
+    .custom-dropdown.open > .custom-dropdown-menu,
+    .custom-dropdown:hover > .custom-dropdown-menu,
+    .custom-dropdown:focus-within > .custom-dropdown-menu {
+        display: block;
+    }
+    .custom-dropdown .dropdown-item.active,
+    .custom-dropdown.active > .nav-link {
+        font-weight: 600;
+        color: var(--bs-primary) !important;
+    }
+    .custom-dropdown .dropdown-item {
+        padding: 0.45rem 1rem;
+    }
+    .custom-dropdown .dropdown-item:hover {
+        background-color: rgba(13, 110, 253, 0.08);
+    }
+</style>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const dropdowns = document.querySelectorAll('.custom-dropdown');
+
+        function closeAll() {
+            dropdowns.forEach(drop => drop.classList.remove('open'));
+        }
+
+        dropdowns.forEach(dropdown => {
+            const toggle = dropdown.querySelector('[data-dropdown-toggle]');
+            toggle?.addEventListener('click', function (e) {
+                e.preventDefault();
+                const isOpen = dropdown.classList.contains('open');
+                closeAll();
+                if (!isOpen) {
+                    dropdown.classList.add('open');
+                }
+            });
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('.custom-dropdown')) {
+                closeAll();
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeAll();
+            }
+        });
+    });
+</script>
