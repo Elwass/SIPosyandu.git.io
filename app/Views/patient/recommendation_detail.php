@@ -108,29 +108,9 @@ $currentFulfillmentMethod = $latestOrder['fulfillment_method'] ?? null;
                 </div>
             </div>
             <div class="col-lg-4">
-                <?php if ($isPatient): ?>
-                    <div class="surface-card mb-3" id="fulfillment-card">
-                        <div class="surface-header">
-                            <h5 class="mb-0">Proses Rekomendasi</h5>
-                        </div>
-                        <div class="surface-body">
-                            <form id="fulfillment-form">
-                                <input type="hidden" name="recommendation_id" value="<?= $recommendation['id'] ?>">
-                                <div class="mb-3">
-                                    <label class="form-label">Metode Pemenuhan</label>
-                                    <select class="form-select" name="fulfillment_method" id="fulfillment_method" required>
-                                        <option value="PICKUP" <?= $currentFulfillmentMethod === 'PICKUP' ? 'selected' : '' ?>>Pickup (ambil di posyandu)</option>
-                                        <option value="DELIVERY" <?= $currentFulfillmentMethod === 'DELIVERY' ? 'selected' : '' ?>>Delivery (antar)</option>
-                                        <option value="SELF_BUY" <?= $currentFulfillmentMethod === 'SELF_BUY' ? 'selected' : '' ?>>Self Buy (beli sendiri)</option>
-                                    </select>
-                                </div>
-                                <div class="mb-3 d-none" id="delivery-address">
-                                    <label class="form-label">Alamat Pengantaran</label>
-                                    <textarea class="form-control" name="address" rows="3" placeholder="Alamat lengkap"></textarea>
-                                </div>
-                                <button class="btn btn-primary w-100" type="submit" id="process-button">Bayar Sekarang</button>
-                            </form>
-                        </div>
+                <div class="surface-card mb-3" id="fulfillment-card">
+                    <div class="surface-header">
+                        <h5 class="mb-0">Proses Rekomendasi</h5>
                     </div>
                     <div class="surface-card" id="payment-section">
                         <div class="surface-header">
@@ -148,27 +128,34 @@ $currentFulfillmentMethod = $latestOrder['fulfillment_method'] ?? null;
                             <small class="text-muted d-block mt-2">Pembayaran online berlaku untuk Pickup & Delivery.</small>
                         </div>
                     </div>
-                    <div class="surface-card d-none" id="self-buy-section">
-                        <div class="surface-header">
-                            <h5 class="mb-0">Pembelian Mandiri</h5>
-                        </div>
-                        <div class="surface-body">
-                            <p class="mb-2">Metode <strong>Self Buy</strong> dipilih. Silakan beli obat secara mandiri sesuai rekomendasi.</p>
-                            <p class="text-muted mb-0 small">Simpan bukti pembelian dan ikuti aturan pakai yang tercantum pada resep.</p>
+                </div>
+                <div class="surface-card" id="payment-section">
+                    <div class="surface-header">
+                        <h5 class="mb-0">Pembayaran</h5>
+                    </div>
+                    <div class="surface-body">
+                        <?php if (!$clientKey): ?>
+                            <div class="alert alert-danger">Client Key Midtrans belum diisi di app/config.php</div>
+                        <?php endif; ?>
+                        <p class="mb-2">Total: <strong id="payment-total">Rp<?= number_format($subtotal, 0, ',', '.') ?></strong></p>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-success" id="pay-button" type="button">Bayar Sekarang</button>
+                            <button class="btn btn-outline-secondary" id="refresh-button" type="button" <?= $currentFulfillmentId ? '' : 'disabled' ?>>Perbarui Status</button>
+                            <?php if ($currentFulfillmentId): ?>
+                                <a class="btn btn-outline-primary" href="<?= url('?page=order-payment-detail&id=' . $currentFulfillmentId) ?>">Lihat Detail Pesanan</a>
+                            <?php endif; ?>
                         </div>
                     </div>
-                <?php else: ?>
-                    <div class="surface-card mb-3">
-                        <div class="surface-header">
-                            <h5 class="mb-0">Pembayaran</h5>
-                        </div>
-                        <div class="surface-body">
-                            <p class="mb-2">Status Pembayaran:</p>
-                            <p class="mb-2"><span class="badge bg-soft-secondary text-secondary" id="payment-status-admin"><?= htmlspecialchars($initialPaymentStatus) ?></span></p>
-                            <p class="text-muted mb-0 small">Pembayaran dilakukan oleh pasien melalui portal pasien. Admin hanya perlu memantau status.</p>
-                        </div>
+                </div>
+                <div class="surface-card d-none" id="self-buy-section">
+                    <div class="surface-header">
+                        <h5 class="mb-0">Pembelian Mandiri</h5>
                     </div>
-                <?php endif; ?>
+                    <div class="surface-body">
+                        <p class="mb-2">Metode <strong>Self Buy</strong> dipilih. Silakan beli obat secara mandiri sesuai rekomendasi.</p>
+                        <p class="text-muted mb-0 small">Simpan bukti pembelian dan ikuti aturan pakai yang tercantum pada resep.</p>
+                    </div>
+                </div>
             </div>
         </div>
         <?php endif; ?>
@@ -191,6 +178,7 @@ const recommendationStatusEl = document.getElementById('recommendation-status');
 let currentOrderId = <?= $currentFulfillmentId ? (int) $currentFulfillmentId : 'null' ?>;
 let paymentStatusEl = document.getElementById('payment-status');
 let hasClientKey = Boolean("<?= $clientKey ?>");
+const detailBaseUrl = '<?= url('?page=order-payment-detail&id=') ?>';
 
 function toggleFulfillmentUi() {
     const method = fulfillmentMethod.value;
@@ -222,7 +210,8 @@ function toggleFulfillmentUi() {
 
 function setPayButtonLoading(isLoading) {
     const requiresGateway = fulfillmentMethod.value !== 'SELF_BUY';
-    payButton.disabled = isLoading || (requiresGateway && !hasClientKey);
+    const alreadyPaid = paymentStatusEl.textContent.toUpperCase() === 'PAID';
+    payButton.disabled = isLoading || alreadyPaid || (requiresGateway && !hasClientKey);
     payButton.textContent = isLoading ? 'Memproses...' : (requiresGateway ? 'Bayar Sekarang' : 'Buat Pesanan');
 }
 
@@ -256,7 +245,7 @@ async function createPaymentAndPay(eventSource = 'button') {
         refreshButton.disabled = !currentOrderId;
 
         if (!data.token) {
-            alert('Pesanan tercatat. Silakan proses pembelian mandiri.');
+            window.location = detailBaseUrl + currentOrderId;
             return;
         }
 
@@ -266,7 +255,7 @@ async function createPaymentAndPay(eventSource = 'button') {
         }
 
         window.snap.pay(data.token, {
-            onSuccess: function () { syncStatus(); },
+            onSuccess: function () { syncStatus(true); },
             onPending: function () { paymentStatusEl.textContent = 'PENDING'; },
             onError: function () { alert('Pembayaran gagal. Coba lagi.'); },
             onClose: function () { setPayButtonLoading(false); }
@@ -300,7 +289,11 @@ async function syncStatus(showAlert = false) {
         if (data.recommendation_status) {
             recommendationStatusEl.textContent = data.recommendation_status;
         }
-        if (showAlert) {
+        if (data.redirect_url) {
+            window.location = data.redirect_url;
+            return;
+        }
+        if (showAlert && !data.redirect_url) {
             alert('Status diperbarui: ' + data.payment_status);
         }
     } catch (error) {
@@ -323,6 +316,11 @@ refreshButton.addEventListener('click', () => {
 
 if (!hasClientKey && fulfillmentMethod.value !== 'SELF_BUY') {
     payButton.disabled = true;
+}
+
+if (paymentStatusEl.textContent.toUpperCase() === 'PAID') {
+    payButton.disabled = true;
+    processButton.disabled = true;
 }
 
 toggleFulfillmentUi();
