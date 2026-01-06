@@ -19,6 +19,13 @@ class CheckoutController
         require_role(['pasien']);
         header('Content-Type: application/json');
 
+        $appConfig = require __DIR__ . '/../config.php';
+        Config::$serverKey = $appConfig['midtrans']['server_key'] ?? Config::$serverKey;
+        Config::$clientKey = $appConfig['midtrans']['client_key'] ?? Config::$clientKey;
+        Config::$isProduction = $appConfig['midtrans']['is_production'] ?? false;
+        Config::$isSanitized = true;
+        Config::$is3ds = true;
+
         $cart = $_SESSION['cart'] ?? [];
         if (!$cart) {
             http_response_code(400);
@@ -54,12 +61,6 @@ class CheckoutController
             echo json_encode(['error' => 'Tidak ada item valid untuk dibayar']);
             return;
         }
-
-        Config::$serverKey = config('midtrans.server_key', Config::$serverKey);
-        Config::$clientKey = config('midtrans.client_key', Config::$clientKey);
-        Config::$isProduction = config('midtrans.is_production', false);
-        Config::$isSanitized = true;
-        Config::$is3ds = true;
 
         $user = user();
         $payload = [

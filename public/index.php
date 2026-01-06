@@ -2,6 +2,7 @@
 require __DIR__ . '/../app/bootstrap.php';
 
 $page = $_GET['page'] ?? (is_logged_in() ? (user()['role'] === 'pasien' ? 'patient-dashboard' : 'dashboard') : 'landing');
+$action = $_GET['action'] ?? null;
 $method = $_SERVER['REQUEST_METHOD'];
 
 $authController = new AuthController();
@@ -10,6 +11,44 @@ $cartController = new CartController();
 $orderController = new OrderController();
 $midtransWebhook = new MidtransWebhookController();
 $checkoutController = new CheckoutController();
+$bookingController = new BookingController();
+$medicineController = new MedicineController();
+$recommendationController = new RecommendationController();
+$fulfillmentController = new FulfillmentController();
+
+if ($action) {
+    switch ($action) {
+        case 'booking-pay':
+            if ($method === 'POST') {
+                $bookingController->pay($_GET['code'] ?? '');
+            }
+            break;
+        case 'booking-check-status':
+            if ($method === 'POST') {
+                $bookingController->checkStatus($_GET['code'] ?? '');
+            }
+            break;
+        case 'create-fulfillment-order':
+            if ($method === 'POST') {
+                $fulfillmentController->create();
+            }
+            break;
+        case 'pay-fulfillment-order':
+            if ($method === 'POST') {
+                $fulfillmentController->pay();
+            }
+            break;
+        case 'check-fulfillment-status':
+            if ($method === 'POST') {
+                $fulfillmentController->checkStatus();
+            }
+            break;
+        default:
+            http_response_code(404);
+            include __DIR__ . '/../app/Views/errors/404.php';
+    }
+    return;
+}
 
 switch ($page) {
     case 'landing':
@@ -84,11 +123,20 @@ switch ($page) {
             $orderController->processCheckout();
         }
         break;
+    case 'booking-detail':
+        $bookingController->show($_GET['code'] ?? '');
+        break;
     case 'orders':
         $orderController->patientOrders();
         break;
     case 'order-detail':
         $orderController->orderDetail();
+        break;
+    case 'patient-recommendations':
+        $recommendationController->patientList();
+        break;
+    case 'recommendation-detail':
+        $recommendationController->patientDetail();
         break;
     case 'residents':
         if (!is_logged_in()) {
@@ -169,6 +217,30 @@ switch ($page) {
     case 'admin-products-delete':
         if ($method === 'POST') {
             $productController->destroy();
+        }
+        break;
+    case 'admin-medicines':
+        $medicineController->adminIndex();
+        break;
+    case 'admin-medicines-store':
+        if ($method === 'POST') {
+            $medicineController->store();
+        }
+        break;
+    case 'admin-medicines-update':
+        if ($method === 'POST') {
+            $medicineController->update();
+        }
+        break;
+    case 'admin-recommendations':
+        $recommendationController->adminIndex();
+        break;
+    case 'admin-recommendations-create':
+        $recommendationController->createForm();
+        break;
+    case 'admin-recommendations-store':
+        if ($method === 'POST') {
+            $recommendationController->store();
         }
         break;
     case 'admin-orders':
